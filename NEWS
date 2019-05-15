@@ -1,0 +1,6 @@
+RstoxBuild v1.0 (Release date: 2019-05-03)
+==============
+
+Changes:
+
+* First build. Added the functions build_Rstox_package(), Rstox_package_specs(), getDESCRIPTION(), getREADME(), getImports(), addImportsToDESCRIPTION(), getPkgname(), getGitHub_InstallPath(), getGitHub_NewsLink(), getNews(), isMaster(), and specifications for the packages Rstox, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc and RstoxBuild. 

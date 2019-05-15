@@ -1,0 +1,4 @@
+user	rootDir
+"arnejh"	"~/Code/Github"
+"atlet"	"F:/GIT"
+"edvinf"	"~/code/github"
