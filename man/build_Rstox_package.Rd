@@ -7,14 +7,14 @@
 \usage{
 build_Rstox_package(packageName, version = "1.0", Rversion = "3.5",
   pckversion = NULL, suggests = NULL,
-  githubRoot = "https://github.com/Sea2Data", onCran = FALSE,
+  githubRoot = "https://github.com/IMR-StoX", onCran = FALSE,
   license = "LGPL-3", rootDir = NULL, title = NULL,
   description = NULL, details = NULL, .onLoad = NULL,
   .onAttach = NULL, misc = NULL, authors = NULL, check = FALSE)
 
 package_specs(packageName, version = "1.0", Rversion = "3.5",
   pckversion = NULL, suggests = NULL,
-  githubRoot = "https://github.com/Sea2Data", onCran = FALSE,
+  githubRoot = "https://github.com/IMR-StoX", onCran = FALSE,
   license = "LGPL-3", rootDir = NULL, title = NULL,
   description = NULL, details = NULL, authors = NULL,
   .onLoad = NULL, .onAttach = NULL, misc = NULL)

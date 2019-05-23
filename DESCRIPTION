@@ -5,8 +5,8 @@ Authors@R: c(
   person(given = "Arne Johannes", family = "Holmin", role = c("cre", "aut"), email = "arnejh@hi.no"))
 Depends: R (>= 3.5)
 Description: This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild). The function defines titles, descriptions, dependencies, authors, install instructions and other info for all the packages.
-URL: https://github.com/Sea2Data/RstoxBuild
-BugReports: https://github.com/Sea2Data/RstoxBuild/issues
+URL: https://github.com/IMR-StoX/RstoxBuild
+BugReports: https://github.com/IMR-StoX/RstoxBuild/issues
 License: LGPL-3
 LazyData: true
 RoxygenNote: 6.1.1

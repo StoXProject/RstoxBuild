@@ -13,8 +13,8 @@ This package contains functionality for building the Rstox packages (Rstox, Rsto
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/Sea2Data/RstoxBuild}
-  \item Report bugs at \url{https://github.com/Sea2Data/RstoxBuild/issues}
+  \item \url{https://github.com/IMR-StoX/RstoxBuild}
+  \item Report bugs at \url{https://github.com/IMR-StoX/RstoxBuild/issues}
 }
 
 }

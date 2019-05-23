@@ -31,7 +31,7 @@ build_Rstox_package <- function(
 	Rversion = "3.5", 
 	pckversion = NULL, 
 	suggests = NULL, 
-	githubRoot = "https://github.com/Sea2Data", 
+	githubRoot = "https://github.com/IMR-StoX", 
 	onCran = FALSE, 
 	license = "LGPL-3", 
 	rootDir = NULL, 
@@ -194,7 +194,7 @@ package_specs <- function(
 	Rversion = "3.5", 
 	pckversion = NULL, 
 	suggests = NULL, 
-	githubRoot = "https://github.com/Sea2Data", 
+	githubRoot = "https://github.com/IMR-StoX", 
 	onCran = FALSE, 
 	license = "LGPL-3", 
 	rootDir = NULL, 
@@ -841,24 +841,26 @@ getPackageItem <- function(name, spec, packageName=NULL, version=NULL){
 	return(object)
 }
 # Funciton to get the install path to GitHub:
-getGitHub_InstallPath <- function(packageName = "Rstox", version = "1.0", githubRoot = "https://github.com/Sea2Data", ref = NULL){
+getGitHub_InstallPath <- function(packageName = "Rstox", version = NULL, githubRoot = "https://github.com/IMR-StoX", ref = NULL){
 	# Get the relative GitHub path for the specific release:
 	path <- file.path(basename(githubRoot), packageName)
 	# Add the release version:
 	if(length(version)){
-		path <- paste0(path, "@v", "version")
+		path <- paste0(path, "@v", version)
 	}
+	path <- deparse(path)
+	
 	# Add the ref, which could be the deleop branch:
 	if(length(ref)){
-		path <- paste0(path, ", ref = ", ref)
+		path <- paste0(path, ", ref = ", deparse(ref))
 	}
 	
 	# Construct and return the install string:
-	string <- paste0("devtools::install_github(\"", path, "\")")
+	string <- paste0("devtools::install_github(", path, ")")
 	return(string)
 }
 # Function to get the link to the (online) NEWS file on GitHub depending on the :
-getGitHub_NewsLink <- function(packageName = "Rstox", version = "1.0", githubRoot = "https://github.com/Sea2Data"){
+getGitHub_NewsLink <- function(packageName = "Rstox", version = "1.0", githubRoot = "https://github.com/IMR-StoX"){
 	file.path(githubRoot, packageName, "blob", if(isMaster(version)) "master" else "alpha", "NEWS")
 }
 # Function to get the relevant release notes:
