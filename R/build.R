@@ -12,8 +12,8 @@
 #*********************************************
 #' Function for building Rstox packages
 #'
-#' \code{build_Rstox_package} is used in the continous development of Rstox, writing .onLoad, .onAttach, pkgname, DESCRIPTION and README files and adding dependencies to the NAMEPACE file.\cr \cr
-#' \code{package_specs} gets all specifications of the package from separate funcitons for each package into a list.\cr \cr
+#' \code{buildRstoxPackage} is used in the continous development of Rstox, writing .onLoad, .onAttach, pkgname, DESCRIPTION and README files and adding dependencies to the NAMEPACE file.\cr \cr
+#' \code{packageSpecs} gets all specifications of the package from separate funcitons for each package into a list.\cr \cr
 #'
 #' @param dir	The directory holding the package structure.
 #' @param check	Logical: If TRUE run devtools::check() on the package.
@@ -23,9 +23,9 @@
 #' @importFrom utils install.packages remove.packages
 #' @importFrom usethis proj_set use_git_ignore create_package
 #' @importFrom Rcpp compileAttributes
-#' @rdname build_Rstox_package
+#' @rdname buildRstoxPackage
 # 
-build_Rstox_package <- function(
+buildRstoxPackage <- function(
 	packageName, 
 	version = "1.0", 
 	Rversion = "3.5", 
@@ -45,7 +45,7 @@ build_Rstox_package <- function(
 	check = FALSE){
 	
 	# Get the specifications of the package:
-	spec <- package_specs(
+	spec <- packageSpecs(
 		packageName = packageName, 
 		version = version, 
 		Rversion = Rversion, 
@@ -173,11 +173,14 @@ build_Rstox_package <- function(
 		unlink(sharedObjects, recursive=TRUE, force=TRUE)
 	}
 	utils::install.packages(spec$dir, repos=NULL, type="source", lib=.libPaths()[1])
-	# Build documentation pdf:
+	# Build and open documentation pdf:
 	pkg <- file.path(.libPaths()[1], spec$packageName)
 	path <- file.path(pkg, "extdata", "manual")
 	dir.create(path, recursive=TRUE)
 	temp <- devtools::build_manual(pkg=pkg, path=path)
+	# Open the PDF:
+	pdfFile <- list.files(path, full.names=TRUE)[1]
+	system(paste0("open \"", pdfFile, "\""))
 	##########
 	
 	# Load the package:
@@ -186,9 +189,9 @@ build_Rstox_package <- function(
 #' 
 #' @export
 #' @importFrom utils read.table
-#' @rdname build_Rstox_package
+#' @rdname buildRstoxPackage
 # 
-package_specs <- function(
+packageSpecs <- function(
 	packageName, 
 	version = "1.0", 
 	Rversion = "3.5", 
@@ -317,11 +320,11 @@ package_specs <- function(
 #'
 #' \code{getDESCRIPTION} gets the DESCRIPTION text to write to the DESCRIPTION file, adding authors, R-dependency, title, description and other info stored in the input \code{spec}. Note that the package imports are not added here, but later in the \code{addImportsToDESCRIPTION} function.\cr \cr
 #' \code{getREADME} gets the README file in the Rstox style, which has package and R version in the first two lines, followed by description, install instructions, miscellaneous info, and release notes retrieved from the NEWS file.\cr \cr
-#' \code{getImports} gets the package dependencies (imports) from the NAMESPACE file. This function must be run (immediately) after devtools::document(dir) in \code{\link{build_Rstox_package}}.\cr \cr
+#' \code{getImports} gets the package dependencies (imports) from the NAMESPACE file. This function must be run (immediately) after devtools::document(dir) in \code{\link{buildRstoxPackage}}.\cr \cr
 #' \code{addImportsToDESCRIPTION} adds the imports to the DESCRIPTION file.\cr \cr
 #' \code{getPkgname} gets the pkgname text to write to the pkgname.R file.
 #'
-#' @param spec	A list of package specifications returned from \code{\link{package_specs}}.
+#' @param spec	A list of package specifications returned from \code{\link{packageSpecs}}.
 #' 
 #' @export
 #' @rdname getDESCRIPTION
@@ -503,11 +506,17 @@ addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
 #' @rdname getDESCRIPTION
 #' 
 getPkgname <- function(spec){
-	# Paste title, description, details by linespaces and start all lines with the roxygen line header:
+	# Paste title, description, details by linespaces and start all lines with the roxygen line header. There is a line separating the title and description:
 	out <- c(spec$title, spec$description, spec$details, spec$Rcpp)
-	out <- paste("#' ", out, collapse="\n")
+	out <- paste0("#' ", out, collapse="\n#'\n")
 	# Add the _PACKAGE line:
-	out <- paste(out, "#'\n\"_PACKAGE\"\n#> [1] \"_PACKAGE\"", collapse="\n#'\n")
+	out <- paste(
+		out, 
+		"#' @docType package", 
+		paste("#' @name", spec$packageName), 
+		"#'\n\"_PACKAGE\"", 
+		sep="\n"
+	)
 	return(out)
 }
 
@@ -515,23 +524,20 @@ getPkgname <- function(spec){
 ##### Package specific functions: #####
 ##### Rstox: #####
 title_Rstox <- function(version = "1.0"){
-	out <- "Running StoX functionality independently in R"
-	return(out)
+	"Running StoX functionality independently in R"
 }
 
 description_Rstox <- function(version = "1.0"){
-	out <- "The package Rstox contains most of the functionality of the stock assesment utility StoX, which is an open source application fo acoustic-trawl and swept-area survey estimation."
-	return(out)
+	"The package Rstox contains most of the functionality of the stock assesment utility StoX, which is an open source application fo acoustic-trawl and swept-area survey estimation."
 }
 
 details_Rstox <- function(version = "1.0"){
-	out <- c(
+	c(
 		"The core funciton of the package is \\code{\\link{getBaseline}} which runs a StoX project and retrieves the output and input parameters. The functions \\code{\\link{runBootstrap}} and \\code{\\link{imputeByAge}} are used by StoX for estimating the variance of the survey estimate. The functions \\code{\\link{getReports}} and \\code{\\link{getPlots}} are used to run report and plot funcitons relevant for the type of StoX project.",
 		"Rstox supports a variety of other uses, such as downloading biotic and acoustic data from the Norwegian Marine Data Center through \\code{\\link{getNMDinfo}} and \\code{\\link{getNMDdata}}. The data are placed in StoX projects, enabling the data to be read using \\code{\\link{getBaseline}}. The function \\code{\\link{readXMLfiles}} can be used to simply read an acoustic or biotic xml file into R memory (via a temporary StoX project). The simpler function \\code{\\link{downloadXML}} reads an arbitrary XML file into a list. It is also possible to write acoustic and biotic XML file in the MND echosounder (version 1.0) and biotic (version 1.4 and 3.0) format.",
 		"Rstox also contains functions for generating and reporting parallel or zigzag transect lines for use in a survey through \\code{\\link{surveyPlanner}}.",
 		"Soon to be implemented is running the Estimated Catch at Age (ECA) model develped by the Norwegian Computing Center and the Norwegian Institute of Marine Research."
-		)
-	return(out)
+	)
 }
 
 .onLoad_Rstox <- function(version = "1.0"){
@@ -589,7 +595,7 @@ details_Rstox <- function(version = "1.0"){
 }
 
 misc_Rstox <- function(version = "1.0"){
-	out <- c(
+	c(
 		"# To do this, uncheck the box \"32-bit Files\" when selecting components to install.", 
 		"# If you are re-installing an R that has both 32 and 64 bit, you will need to uninstall R first.", 
 		"", 
@@ -624,180 +630,145 @@ misc_Rstox <- function(version = "1.0"){
 		"# If this fails, try installing from source instead using utils::install.packages('rJava', type='source')", 
 		"# Then the installed Rstox should work."
 	)
-	return(out)
 }
 ##########
 
 ##### RstoxFramework: #####
 title_RstoxFramework <- function(version = "1.0"){
-	out <- "The engine of StoX"
-	return(out)
+	"The engine of StoX"
 }
 
 description_RstoxFramework <- function(version = "1.0"){
-	out <- "This package contains all functions and framwork for running a StoX project."
-	return(out)
+	"This package contains all functions and framwork for running a StoX project."
 }
 
 details_RstoxFramework <- function(version = "1.0"){
-	out <- c(
+	c(
 		"The RstoxFramework package is the engine of the stock assesment utility StoX, which is an open source application fo acoustic-trawl and swept-area survey estimation.", 
 		"The package creates an evironment containing the StoX project(s) in separate environments. Each StoX project consists of a list of data tables holding e.g. biotic and acoustic data, filtered versions of the data, strata system, definitios of primary sampling units, accompanied by a list of specifications of the StoX processes comprising the StoX project. A StoX process is an R function taking as input the project name, the input data and parameters used by the function.",
 		"The package replaces the old Java library in StoX versions prior to StoX 4.0."
-		)
-	return(out)
+	)
 }
 
 authors_RstoxFramework <- function(version = "1.0"){
-	out <- list(
-		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Ibrahim", family="Umar", role=c("aut")),
-		list(given="Edvin", family="Fuglebakk", role=c("aut")),
-		list(given="Aasmund", family="Skaalevik", role=c("aut")),
-		list(given="Sindre", family="Vatnehol", role=c("aut")),
-		list(given="Esmael Musema", family="Hassen", role=c("aut")),
-		list(given="Espen", family="Johnsen", role=c("aut")),
-		list(given="Atle", family="Totland", role=c("aut")),
-		list(given="Mikko Juhani", family="Vihtakari", role=c("aut"))
+	list(
+		list(given="Arne Johannes", family="Holmin",    role=c("cre", "aut"), email="arnejh@hi.no"), 
+		list(given="Ibrahim",       family="Umar",      role=c("aut")),
+		list(given="Edvin",         family="Fuglebakk", role=c("aut")),
+		list(given="Aasmund",       family="Skaalevik", role=c("aut")),
+		list(given="Sindre",        family="Vatnehol",  role=c("aut")),
+		list(given="Esmael Musema", family="Hassen",    role=c("aut")),
+		list(given="Espen",         family="Johnsen",   role=c("aut")),
+		list(given="Atle",          family="Totland",   role=c("aut")),
+		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut"))
 	)
-	return(out)
 }
 ##########
 
 ##### RstoxData: #####
 title_RstoxData <- function(version = "1.0"){
-	out <- "Read, filter and write input/output data for StoX"
-	return(out)
+	"Read, filter and write input/output data for StoX"
 }
 
 description_RstoxData <- function(version = "1.0"){
-	out <- "This package contains functions for reading, filtering and writing XML files and possibly other files used as input/output to StoX."
-	return(out)
+	"This package contains functions for reading, filtering and writing XML files and possibly other files used as input/output to StoX."
 }
 
 details_RstoxData <- function(version = "1.0"){
-	out <- c(
-		"The RstoxData package contains functions for reading, filtering and writing biotic, acoustic and landing data as XML files. Filtering can be done by R syntax such as longitude > 10, or by pre defined functions such as inside()."
-		)
-	return(out)
+	"The RstoxData package contains functions for reading, filtering and writing biotic, acoustic and landing data as XML files. Filtering can be done by R syntax such as longitude > 10, or by pre defined functions such as inside()."
 }
 
 authors_RstoxData <- function(version = "1.0"){
-	out <- list(
-		list(given="Ibrahim", family="Umar", role=c("cre", "aut"), email="ibrahim.umar@hi.no"), 
-		list(given="Mikko Juhani", family="Vihtakari", role=c("aut")),
-		list(given="Arne Johannes", family="Holmin", role=c("aut"))
+	list(
+		list(given="Ibrahim",       family="Umar",      role=c("cre", "aut"), email="ibrahim.umar@hi.no"), 
+		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut")),
+		list(given="Arne Johannes", family="Holmin",    role=c("aut"))
 	)
-	return(out)
 }
 ##########
 
 ##### RstoxECA: #####
 title_RstoxECA <- function(version = "1.0"){
-	out <- "Estimated Catch at Age with Rstox"
-	return(out)
+	"Estimated Catch at Age with Rstox"
 }
 
 description_RstoxECA <- function(version = "1.0"){
-	out <- "This package is used to run the Estimated Catch at Age model through the Reca package developed by the Norwegian Computing Center."
-	return(out)
+	"This package is used to run the Estimated Catch at Age model through the Reca package developed by the Norwegian Computing Center."
 }
 
 details_RstoxECA <- function(version = "1.0"){
-	out <- c(
-		"The estimated catch at age (ECA) model uses the correlation structure in biotic (fishery independent) data to distribute age readings from cathes (landings) onto the biotic data. The ECA model is described in Hirst, D., Aanes, S., Storvik, G., Huseby, R. B., & Tvete, I. F. (2004). Estimating catch at age from market sampling data by using a Bayesian hierarchical model. Journal of the Royal Statistical Society: Series C (Applied Statistics), 53(1), 1-14."
-		)
-	return(out)
+	"The estimated catch at age (ECA) model uses the correlation structure in biotic (fishery independent) data to distribute age readings from cathes (landings) onto the biotic data. The ECA model is described in Hirst, D., Aanes, S., Storvik, G., Huseby, R. B., & Tvete, I. F. (2004). Estimating catch at age from market sampling data by using a Bayesian hierarchical model. Journal of the Royal Statistical Society: Series C (Applied Statistics), 53(1), 1-14."
 }
 
 authors_RstoxECA <- function(version = "1.0"){
-	out <- list(
-		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="edvin.fuglebakk@hi.no"), 
-		list(given="Edvin", family="Fuglebakk", role=c("aut"))
+	list(
+		list(given="Arne Johannes", family="Holmin",    role=c("cre", "aut"), email="edvin.fuglebakk@hi.no"), 
+		list(given="Edvin",         family="Fuglebakk", role=c("aut"))
 	)
-	return(out)
 }
 ##########
 
 ##### RstoxSurveyPlanner: #####
 title_RstoxSurveyPlanner <- function(version = "1.0"){
-	out <- "Survey design of acoustic-trawl and swept area surveys"
-	return(out)
+	"Survey design of acoustic-trawl and swept area surveys"
 }
 
 description_RstoxSurveyPlanner <- function(version = "1.0"){
-	out <- "This package generates parallel or zig zag transects for use in acoustic-trawl and swept area surveys."
-	return(out)
+	"This package generates parallel or zig zag transects for use in acoustic-trawl and swept area surveys."
 }
 
 details_RstoxSurveyPlanner <- function(version = "1.0"){
-	out <- c(
-		"The RstoxSurveyPlanner package is a tool for generating parallel and zig zag transects for acoustic-trawl and swept-area surveys. Several methods for zig zag survey design are implemented, including the equal space design by Strindberg, S., & Buckland, S. T. (2004). Zigzag survey designs in line transect sampling. Journal of Agricultural, Biological, and Environmental Statistics, 9(4), 443. To garantee equal coverage the package includes the zig zag survey design presented by Harbitz, A. (2019). A zigzag survey design for continuous transect sampling with guaranteed equal coverage probability. Fisheries Research, 213, 151-159."
-		)
-	return(out)
+	"The RstoxSurveyPlanner package is a tool for generating parallel and zig zag transects for acoustic-trawl and swept-area surveys. Several methods for zig zag survey design are implemented, including the equal space design by Strindberg, S., & Buckland, S. T. (2004). Zigzag survey designs in line transect sampling. Journal of Agricultural, Biological, and Environmental Statistics, 9(4), 443. To garantee equal coverage the package includes the zig zag survey design presented by Harbitz, A. (2019). A zigzag survey design for continuous transect sampling with guaranteed equal coverage probability. Fisheries Research, 213, 151-159."
 }
 
 authors_RstoxSurveyPlanner <- function(version = "1.0"){
-	out <- list(
-		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Sindre", family="Vatnehol", role=c("cre", "aut"), email="sindre.vatnehol@hi.no"), 
-		list(given="Alf", family="Harbitz", role=c("aut")), 
-		list(given="Espen", family="Johnsen", role=c("aut"))
+	list(
+		list(given="Arne Johannes", family="Holmin",   role=c("cre", "aut"), email="arnejh@hi.no"), 
+		list(given="Sindre",        family="Vatnehol", role=c("cre", "aut"), email="sindre.vatnehol@hi.no"), 
+		list(given="Alf",           family="Harbitz",  role=c("aut")), 
+		list(given="Espen",         family="Johnsen",  role=c("aut"))
 	)
-	return(out)
 }
 ##########
 
 ##### RstoxTempdoc: #####
 title_RstoxTempdoc <- function(version = "1.0"){
-	out <- "Temporary package for documenting the RstoxFramework package"
-	return(out)
+	"Temporary package for documenting the RstoxFramework package"
 }
 
 description_RstoxTempdoc <- function(version = "1.0"){
-	out <- "This package is merely for documenting RstoxFramework."
-	return(out)
+	"This package is merely for documenting RstoxFramework."
 }
 
 details_RstoxTempdoc <- function(version = "1.0"){
-	out <- c(
-		"This package will be deleted once the development of the RstoxFramework package has reached a version with identical or expectedly differing output as StoX 3.0."
-		)
-	return(out)
+	"This package will be deleted once the development of the RstoxFramework package has reached a version with identical or expectedly differing output as StoX 3.0."
 }
 
 authors_RstoxTempdoc <- function(version = "1.0"){
-	out <- list(
-		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Atle", family="Totland", role=c("aut"))
+	list(
+		list(given="Arne Johannes", family="Holmin",  role=c("cre", "aut"), email="arnejh@hi.no"), 
+		list(given="Atle",          family="Totland", role=c("aut"))
 	)
-	return(out)
 }
 ##########
 
 ##### RstoxBuild: #####
 title_RstoxBuild <- function(version = "1.0"){
-	out <- "Package for building all Rstox packages"
-	return(out)
+	"Package for building all Rstox packages"
 }
 
 description_RstoxBuild <- function(version = "1.0"){
-	out <- "This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild). The function defines titles, descriptions, dependencies, authors, install instructions and other info for all the packages."
-	return(out)
+	"This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
 }
 
 details_RstoxBuild <- function(version = "1.0"){
-	out <- c(
-		"This package is used for building the Rstox packages. All changes to authors, descriptions, suggests and other outputs of the function \\code{package_specs} should be changed in this package, and not in the individual packages."
-		)
-	return(out)
+	"The package defines titles, descriptions, dependencies, authors, install instructions and other info for all the packages. All changes to authors, descriptions, suggests and other outputs of the function \\code{packageSpecs} should be changed in this package, and not in the individual packages. The package also contains functionality for semi-automated testing of Rstox on a set of test projects."
 }
 
 authors_RstoxBuild <- function(version = "1.0"){
-	out <- list(
+	list(
 		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
 	)
-	return(out)
 }
 ##########
 
