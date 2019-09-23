@@ -2,4 +2,4 @@ user	rootDir
 "arnejh"	"~/Code/Github"
 "atlet"	"F:/GIT"
 "edvinf"	"~/code/github"
-"esmaelmh"	"D:\Projects\StoXProject"
+"esmaelmh"	"D:/Projects/StoXProject"
