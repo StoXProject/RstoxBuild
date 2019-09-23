@@ -12,4 +12,3 @@ getTestFolderStructure(x)
 \description{
 Small funciton to get a list of the file paths to the sub folders of the test directory (ProjOrig, Proj, Output, Diff)
 }
-\keyword{internal}

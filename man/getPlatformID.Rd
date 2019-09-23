@@ -12,4 +12,3 @@ getPlatformID()
 \description{
 Get the platform ID of an operating system
 }
-\keyword{internal}

@@ -91,7 +91,7 @@ buildRstoxPackage <- function(
 	##########
 	
 	##### Write the onAttach.R file: #####
-	if(length(spec$.onLoad)){
+	if(length(spec$.onAttach)){
 		onAttachFile <- file.path(spec$dir, "R", "onAttach.R")
 		write(spec$.onAttach, onAttachFile)
 	}
@@ -178,6 +178,7 @@ buildRstoxPackage <- function(
 	path <- file.path(pkg, "extdata", "manual")
 	dir.create(path, recursive=TRUE)
 	temp <- devtools::build_manual(pkg=pkg, path=path)
+	print(path)
 	# Open the PDF:
 	pdfFile <- list.files(path, full.names=TRUE)[1]
 	system(paste0("open \"", pdfFile, "\""))
@@ -185,6 +186,8 @@ buildRstoxPackage <- function(
 	
 	# Load the package:
 	library(spec$packageName, character.only=TRUE)
+	
+	path
 }
 #' 
 #' @export
@@ -662,6 +665,16 @@ authors_RstoxFramework <- function(version = "1.0"){
 		list(given="Atle",          family="Totland",   role=c("aut")),
 		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut"))
 	)
+}
+
+.onLoad_RstoxFramework <- function(version = "1.0"){
+    out <- c(
+        ".onLoad <- function(libname, pkgname){", 
+        "\t# Initiate the Rstox envitonment:", 
+        "\tinitiateRstoxFramework()", 
+        "} "
+    )
+    paste(out, collapse="\n")
 }
 ##########
 

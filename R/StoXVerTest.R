@@ -5,7 +5,6 @@
 #' @param var	The element of Sys.info() used as identifyer of the platform.
 #'
 #' @export
-#' @keywords internal
 #'
 getPlatformID <- function(){
 	#getPlatformID <- function(var="release"){
@@ -20,7 +19,6 @@ getPlatformID <- function(){
 #' @param x	The test directory
 #'
 #' @export
-#' @keywords internal
 #'
 getTestFolderStructure <- function(x){
 	
@@ -50,7 +48,7 @@ getTestFolderStructure <- function(x){
 #' @param n		The number of directories to return, as used in utils::tail().
 #'
 #' @export
-#' @keywords internal
+#' @noRd
 #'
 getLatestDir <- function(dir, op="<", n=1){
 	
@@ -159,7 +157,7 @@ versionScaled <- function(x){
 #' @param op,n		See \code{\link{getLatestDir}}.
 #'
 #' @export
-#' @rdname runPelfoss
+#' @rdname copyLatestToServer
 #' @noRd
 #' @keywords internal
 #'
@@ -195,36 +193,55 @@ copyLatestToServer <- function(local, server, toCopy=c("Diff", "Output", "ProjOr
 }
 #'
 #' @export
-#' @rdname runPelfoss
+#' @rdname copyLatestToServer
 #' @noRd
 #' @keywords internal
 #'
-copyStagedProjOrig <- function(server, local, overwrite=TRUE, op="<", n=1){
+copyStagedProjOrigFromServer <- function(server, local, overwrite=TRUE, op="<", n=1){
+    localStagedProjOrig <- getTestFolderStructure(path.expand(local))$StagedProjOrig
+    localStagedProjOrigList <- list.dirs(localStagedProjOrig, recursive=FALSE)
+	serverStagedProjOrig <- getTestFolderStructure(path.expand(server))$StagedProjOrig
+	serverStagedProjOrigList <- list.dirs(serverStagedProjOrig, recursive=FALSE)
 	
-	local <- getTestFolderStructure(path.expand(local))$StagedProjOrig
-	server <- getTestFolderStructure(path.expand(server))$StagedProjOrig
+	# Copy the folders missing in the local StagedProjOrig:
+	missingStagedProjOrig <- serverStagedProjOrigList[!basename(serverStagedProjOrigList) %in% basename(localStagedProjOrigList)]
 	
-	# Get the latest local folder, to which staged projects on the server will be copied:
-	#localLatest <- getLatestDir(local, op="<", n=1)
-	localLatest <- file.path(local, getRstoxVersionString())
-	
-	# Look for the corresponding folder on the server:
-	serverLatest <- file.path(server, getRstoxVersionString())
-	
-	
-	# Copy if 'serverLatest' exists and is not empty:
-	serverLatestDirs <- list.dirs(serverLatest, recursive=FALSE)
-	if(length(serverLatestDirs)){
-		# Delete the local StagedProjOrig:
-		unlink(localLatest, recursive=TRUE, force=TRUE)
-	
-		message("Copying the following projects from the server to the local system:\n\t", paste(serverLatestDirs, collapse="\n\t"))
-	
-		file.copy(serverLatest, local, recursive=TRUE, overwrite=overwrite)
+	if(length(missingStagedProjOrig)){
+	    message("Copying the following folders from the server to the local system:\n\t", paste(missingStagedProjOrig, collapse="\n\t"))
+	    
+	    file.copy(missingStagedProjOrig, localStagedProjOrig, recursive=TRUE, overwrite=overwrite)
 	}
 	else{
-		message("No staged original projects copied from the server to the local system")
+	    message("No staged original projects copied from the server to the local system")
 	}
+}
+#'
+#' @export
+#' @rdname copyLatestToServer
+#' @noRd
+#' @keywords internal
+#'
+copyStagedProjOrigLocal <- function(dir){
+    # Get the 
+    StagedProjOrig <- getTestFolderStructure(path.expand(dir))$StagedProjOrig
+    ProjOrig <- getTestFolderStructure(path.expand(dir))$ProjOrig
+   
+    
+     localStagedProjOrigList <- list.dirs(localStagedProjOrig, recursive=FALSE)
+    serverStagedProjOrig <- getTestFolderStructure(path.expand(server))$StagedProjOrig
+    serverStagedProjOrigList <- list.dirs(serverStagedProjOrig, recursive=FALSE)
+    
+    # Copy the folders missing in the local StagedProjOrig:
+    missingStagedProjOrig <- serverStagedProjOrigList[!basename(serverStagedProjOrigList) %in% basename(localStagedProjOrigList)]
+    
+    if(length(missingStagedProjOrig)){
+        message("Copying the following folders from the server to the local system:\n\t", paste(missingStagedProjOrig, collapse="\n\t"))
+        
+        file.copy(missingStagedProjOrig, localStagedProjOrig, recursive=TRUE, overwrite=overwrite)
+    }
+    else{
+        message("No staged original projects copied from the server to the local system")
+    }
 }
 
 #*********************************************
@@ -477,7 +494,7 @@ automatedRstoxTest <- function(root=list(windows="\\\\delphi", unix="/Volumes"),
 		}
 	}
 
-	
+	browser()
 	# Set the directory of the test projects:
 	server <- getServerPath(root=root, path=path)
 	#root <- root[[.Platform$OS.type]]
@@ -509,7 +526,7 @@ automatedRstoxTest <- function(root=list(windows="\\\\delphi", unix="/Volumes"),
 	if(copyFromServer){
 		#cat("Copying original projects from \"", server, "\" to ", dir, "\n", sep="")
 		#message("Copying original projects from \"", server, "\" to \"", dir, "\"\n")
-		copyStagedProjOrig(dirname(server), dir)
+		copyStagedProjOrigFromServer(dirname(server), dir)
 	}
 	
 	# Get the latest projects:
