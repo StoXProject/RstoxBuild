@@ -1,4 +1,4 @@
-# RstoxBuild version: 1.0 (latest beta, 2019-09-23)
+# RstoxBuild version: 1.0 (latest beta, 2019-10-02)
 # R version: 3.5
 
 
@@ -6,9 +6,9 @@
 
 
 # Install the latest official version
-devtools::install_github("IMR-StoX/RstoxBuild")
+devtools::install_github("StoXProject/RstoxBuild")
 
-# It is also possible to install the latest development version, through devtools::install_github("IMR-StoX/RstoxBuild", ref = "develop")
+# It is also possible to install the latest development version, through devtools::install_github("StoXProject/RstoxBuild", ref = "develop")
 # Note that this does not guarantee a stable version and should ONLY be used to test out new functionality.
 
 
@@ -16,6 +16,6 @@ devtools::install_github("IMR-StoX/RstoxBuild")
 # 1.  First build. Added the functions build_Rstox_package(), Rstox_package_specs(), getDESCRIPTION(), getREADME(), getImports(), addImportsToDESCRIPTION(), getPkgname(), getGitHub_InstallPath(), getGitHub_NewsLink(), getNews(), isMaster(), and specifications for the packages Rstox, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc and RstoxBuild.
 # 2.  Fixed missing quotation marks in the install instructions.
 
-# For historical release notes see https://github.com/IMR-StoX/RstoxBuild/blob/master/NEWS
+# For historical release notes see https://github.com/StoXProject/RstoxBuild/blob/master/NEWS
 
 

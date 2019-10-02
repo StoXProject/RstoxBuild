@@ -14,8 +14,8 @@ The package defines titles, descriptions, dependencies, authors, install instruc
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/IMR-StoX/RstoxBuild}
-  \item Report bugs at \url{https://github.com/IMR-StoX/RstoxBuild/issues}
+  \item \url{https://github.com/StoXProject/RstoxBuild}
+  \item Report bugs at \url{https://github.com/StoXProject/RstoxBuild/issues}
 }
 
 }

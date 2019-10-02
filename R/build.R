@@ -19,10 +19,6 @@
 #' @param check	Logical: If TRUE run devtools::check() on the package.
 #' 
 #' @export
-#' @importFrom devtools check document build_manual unload
-#' @importFrom utils install.packages remove.packages
-#' @importFrom usethis proj_set use_git_ignore create_package
-#' @importFrom Rcpp compileAttributes
 #' @rdname buildRstoxPackage
 # 
 buildRstoxPackage <- function(
@@ -31,7 +27,7 @@ buildRstoxPackage <- function(
 	Rversion = "3.5", 
 	pckversion = NULL, 
 	suggests = NULL, 
-	githubRoot = "https://github.com/IMR-StoX", 
+	githubRoot = "https://github.com/StoXProject", 
 	onCran = FALSE, 
 	license = "LGPL-3", 
 	rootDir = NULL, 
@@ -191,7 +187,6 @@ buildRstoxPackage <- function(
 }
 #' 
 #' @export
-#' @importFrom utils read.table
 #' @rdname buildRstoxPackage
 # 
 packageSpecs <- function(
@@ -200,7 +195,7 @@ packageSpecs <- function(
 	Rversion = "3.5", 
 	pckversion = NULL, 
 	suggests = NULL, 
-	githubRoot = "https://github.com/IMR-StoX", 
+	githubRoot = "https://github.com/StoXProject", 
 	onCran = FALSE, 
 	license = "LGPL-3", 
 	rootDir = NULL, 
@@ -412,11 +407,8 @@ getREADME <- function(spec){
 		
 		# Add the alternative install:
 		install <- c(
-			"# Install the latest official version", 
-			getGitHub_InstallPath(packageName=spec$packageName, version=NULL, githubRoot=spec$githubRoot), 
-			"",
-			paste0("# It is also possible to install the latest development version, through ", getGitHub_InstallPath(packageName=spec$packageName, version=NULL, githubRoot=spec$githubRoot, ref = "develop")), 
-			"# Note that this does not guarantee a stable version and should ONLY be used to test out new functionality."
+			"# Install the latest developer version", 
+			getGitHub_InstallPath(packageName=spec$packageName, version=NULL, githubRoot=spec$githubRoot)
 		)
 	}
 	
@@ -443,7 +435,6 @@ getREADME <- function(spec){
 }
 #' 
 #' @export
-#' @importFrom utils installed.packages
 #' @rdname getDESCRIPTION
 #' 
 getImports <- function(spec){
@@ -472,7 +463,6 @@ getImports <- function(spec){
 }
 #' 
 #' @export
-#' @importFrom usethis use_package
 #' @rdname getDESCRIPTION
 #' 
 addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
@@ -825,7 +815,7 @@ getPackageItem <- function(name, spec, packageName=NULL, version=NULL){
 	return(object)
 }
 # Funciton to get the install path to GitHub:
-getGitHub_InstallPath <- function(packageName = "Rstox", version = NULL, githubRoot = "https://github.com/IMR-StoX", ref = NULL){
+getGitHub_InstallPath <- function(packageName = "Rstox", version = NULL, githubRoot = "https://github.com/StoXProject", ref = NULL){
 	# Get the relative GitHub path for the specific release:
 	path <- file.path(basename(githubRoot), packageName)
 	# Add the release version:
@@ -844,7 +834,7 @@ getGitHub_InstallPath <- function(packageName = "Rstox", version = NULL, githubR
 	return(string)
 }
 # Function to get the link to the (online) NEWS file on GitHub depending on the :
-getGitHub_NewsLink <- function(packageName = "Rstox", version = "1.0", githubRoot = "https://github.com/IMR-StoX"){
+getGitHub_NewsLink <- function(packageName = "Rstox", version = "1.0", githubRoot = "https://github.com/StoXProject"){
 	file.path(githubRoot, packageName, "blob", if(isMaster(version)) "master" else "alpha", "NEWS")
 }
 # Function to get the relevant release notes:
