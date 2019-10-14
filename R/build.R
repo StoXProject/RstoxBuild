@@ -138,7 +138,6 @@ buildRstoxPackage <- function(
 		
 		# Re-document to include the C++ code:
 		devtools::document(spec$dir)
-		
 	}
 	
 	

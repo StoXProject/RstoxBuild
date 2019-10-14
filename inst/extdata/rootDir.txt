@@ -1,5 +1,5 @@
 user	rootDir
 "arnejh"	"~/Code/Github"
-"atlet"	"F:/GIT"
+"atlet"	"D:/GIT"
 "edvinf"	"~/code/github"
 "esmaelmh"	"D:/Projects/StoXProject"
