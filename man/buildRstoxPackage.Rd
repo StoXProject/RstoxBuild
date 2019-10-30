@@ -10,7 +10,8 @@ buildRstoxPackage(packageName, version = "1.0", Rversion = "3.5",
   githubRoot = "https://github.com/StoXProject", onCran = FALSE,
   license = "LGPL-3", rootDir = NULL, title = NULL,
   description = NULL, details = NULL, .onLoad = NULL,
-  .onAttach = NULL, misc = NULL, authors = NULL, check = FALSE)
+  .onAttach = NULL, misc = NULL, authors = NULL, check = FALSE,
+  noRcpp = FALSE)
 
 packageSpecs(packageName, version = "1.0", Rversion = "3.5",
   pckversion = NULL, suggests = NULL,

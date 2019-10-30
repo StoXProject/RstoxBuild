@@ -8,8 +8,8 @@
 # 5a.	RstoxTempdoc
 # 5b.	RstoxBuild
 
-#*********************************************
-#*********************************************
+##############################################
+##############################################
 #' Function for building Rstox packages
 #'
 #' \code{buildRstoxPackage} is used in the continous development of Rstox, writing .onLoad, .onAttach, pkgname, DESCRIPTION and README files and adding dependencies to the NAMEPACE file.\cr \cr
@@ -38,7 +38,8 @@ buildRstoxPackage <- function(
 	.onAttach = NULL, 
 	misc = NULL, 
 	authors = NULL, 
-	check = FALSE){
+	check = FALSE, 
+	noRcpp = FALSE){
 	
 	# Get the specifications of the package:
 	spec <- packageSpecs(
@@ -119,9 +120,11 @@ buildRstoxPackage <- function(
 	# If there is a src folder present, temporary rename it to src_ to document without, and then re-document with afterwards:
 	if(spec$useCpp){
 		file.rename(spec$src_, spec$src)
-		usethis::use_rcpp()
-		# Add the C++ specifics to the pkgnameFile:
-		write(spec$Rcpp, pkgnameFile, append=TRUE)
+	    if(!noRcpp){
+	        usethis::use_rcpp()
+	        # Add the C++ specifics to the pkgnameFile:
+	        write(spec$Rcpp, pkgnameFile, append=TRUE)
+	    }
 		
 		# Also remove the shared objects from the src directory:
 		sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names=TRUE)
@@ -289,30 +292,12 @@ packageSpecs <- function(
 		"NULL"
 	)
 	
-	
-	## src <- file.path(spec$dir, "src")
-	## spec$useCpp <- FALSE
-	## if(file.exists(src)){
-	## 	if(length(list.files(src)) == 0){
-	## 		stop("The src folder is empty. Put c++ files in it or remove it. Documentatino craches if not.")
-	## 	}
-	## 	spec$useCpp <- TRUE
-	## 	spec$Rcpp <- c(
-	## 		paste0("#' @useDynLib", spec$packageName, ", .registration = TRUE"), 
-	## 		"#' @importFrom Rcpp sourceCpp", 
-	## 		"NULL"
-	## 	)
-	## 	### # Do what usethis::use_rcpp() does, adding Rcpp to imports and linkedto:
-	## 	### spec$linkingto <- unique(c(spec$linkingto, "Rcpp"))
-	## 	### spec$imports <- unique(c(spec$imports, "Rcpp"))
-	## }
-	
 	return(spec)
 }
 
 
-#*********************************************
-#*********************************************
+##############################################
+##############################################
 #' Utility functions for getting and adding imports, DESCRIPTION, README and kgname to the package.
 #'
 #' \code{getDESCRIPTION} gets the DESCRIPTION text to write to the DESCRIPTION file, adding authors, R-dependency, title, description and other info stored in the input \code{spec}. Note that the package imports are not added here, but later in the \code{addImportsToDESCRIPTION} function.\cr \cr
@@ -756,21 +741,41 @@ authors_RstoxTempdoc <- function(version = "1.0"){
 
 ##### RstoxBuild: #####
 title_RstoxBuild <- function(version = "1.0"){
-	"Package for building all Rstox packages"
+    "Package for building all Rstox packages"
 }
 
 description_RstoxBuild <- function(version = "1.0"){
-	"This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
+    "This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
 }
 
 details_RstoxBuild <- function(version = "1.0"){
-	"The package defines titles, descriptions, dependencies, authors, install instructions and other info for all the packages. All changes to authors, descriptions, suggests and other outputs of the function \\code{packageSpecs} should be changed in this package, and not in the individual packages. The package also contains functionality for semi-automated testing of Rstox on a set of test projects."
+    "The package defines titles, descriptions, dependencies, authors, install instructions and other info for all the packages. All changes to authors, descriptions, suggests and other outputs of the function \\code{packageSpecs} should be changed in this package, and not in the individual packages. The package also contains functionality for semi-automated testing of Rstox on a set of test projects."
 }
 
 authors_RstoxBuild <- function(version = "1.0"){
-	list(
-		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
-	)
+    list(
+        list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
+    )
+}
+##########
+
+##### RstoxBase: #####
+title_RstoxBase <- function(version = "1.0"){
+    "Base StoX functions"
+}
+
+description_RstoxBase <- function(version = "1.0"){
+    "This package contains the base StoX functions used for survey estimation"
+}
+
+details_RstoxBase <- function(version = "1.0"){
+    "The StoX functions defined in RstoxBase are those for defining resolution (e.g., PSUs and Layers), assignment, NASC data and StationLengthDistribution data, density, abundance and superindividual abundance"
+}
+
+authors_RstoxBase <- function(version = "1.0"){
+    list(
+        list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
+    )
 }
 ##########
 

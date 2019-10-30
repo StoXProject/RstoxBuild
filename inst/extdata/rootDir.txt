@@ -3,3 +3,6 @@ user	rootDir
 "atlet"	"D:/GIT"
 "edvinf"	"~/code/github"
 "esmaelmh"	"D:/Projects/StoXProject"
+"sindrev"	"E:/Arbeid/Koding/StockAssessmentTools/StoxProject/RstoxData"
+
+
