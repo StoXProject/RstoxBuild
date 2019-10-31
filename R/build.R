@@ -66,7 +66,7 @@ buildRstoxPackage <- function(
 	
 	# If there is a src folder present, temporary rename it to src_ to document without, and then re-document with afterwards:
 	if(spec$useCpp){
-		file.rename(spec$src, spec$src_)
+		#file.rename(spec$src, spec$src_)
 	}
 	
 	# Make sure the folder is recognised as a package with a NAMESPACE file:
@@ -111,38 +111,27 @@ buildRstoxPackage <- function(
 	unlink(file.path(spec$dir, "man"), recursive=TRUE, force=TRUE)
 	devtools::document(spec$dir)
 	
+	# Build individual function PDFs for use by the GUI:
+	writeFunctionPDFs(spec$dir)
+	
+	# Get and write an rds file with function argument descriptions for use by the GUI:
+	getFunctionArgumentDescriptions(spec$dir)
 	
 	# Alter the DESCRIPTION file to contain the imports listed in the NAMESPACE file. This must take place AFTER creating the documentation:
 	spec$imports <- getImports(spec)
 	addImportsToDESCRIPTION(spec)
 	
-	
-	# If there is a src folder present, temporary rename it to src_ to document without, and then re-document with afterwards:
+	# Add linkedTo: Rcpp in the DESCRIPTION:
 	if(spec$useCpp){
-		file.rename(spec$src_, spec$src)
 	    if(!noRcpp){
 	        usethis::use_rcpp()
 	        # Add the C++ specifics to the pkgnameFile:
 	        write(spec$Rcpp, pkgnameFile, append=TRUE)
 	    }
-		
-		# Also remove the shared objects from the src directory:
-		sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names=TRUE)
-		unlink(sharedObjects, recursive=TRUE, force=TRUE)
-		
-		message(paste(
-			"Using devtools::document to re-document the package after C++ code is included. If errors occurred such as 'System command error' try building the package to see specific c++ errors with the following commands:", 
-			paste0("sharedObjects <- list.files(\"", spec$src, "\", pattern = \"\\\\.o|so$\", full.names=TRUE)"), 
-			paste0("unlink(sharedObjects, recursive=TRUE, force=TRUE)"), 
-			paste0("utils::install.packages(\"", spec$dir, "\", repos=NULL, type=\"source\", lib=.libPaths()[1])"), 
-			sep = "\n    "
-			)
-		)
-		
-		# Re-document to include the C++ code:
-		devtools::document(spec$dir)
+	    # Also delete shared objects for safety:
+	    sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names=TRUE)
+	    unlink(sharedObjects, recursive=TRUE, force=TRUE)
 	}
-	
 	
 	##### Run R cmd check with devtools: #####
 	if(check){
@@ -166,10 +155,6 @@ buildRstoxPackage <- function(
 	##########
 	
 	##### Install the package: #####
-	if(spec$useCpp){
-		sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names=TRUE)
-		unlink(sharedObjects, recursive=TRUE, force=TRUE)
-	}
 	utils::install.packages(spec$dir, repos=NULL, type="source", lib=.libPaths()[1])
 	# Build and open documentation pdf:
 	pkg <- file.path(.libPaths()[1], spec$packageName)
@@ -964,5 +949,168 @@ getDefault <- function(name){
 			email = "arnejh@hi.no")
 	)
 	return(defaults[[name]])
+}
+
+# Write single function PDF:
+writeFunctionPDFFromInstalledPackage <- function(functionName, packageName, pdfDir) {
+    # We need to load the package to get the Rd database:
+    library(packageName, character.only = TRUE)
+    # Get the Rd database:
+    db <- tools::Rd_db(packageName)
+    # Define a temporary file to write the Rd to
+    tmp <- tempfile()
+    # Paste the Rd to one string and write to the temporary file:
+    thisRd <- as.character(db[[paste0(functionName, ".Rd")]])
+    
+    if(length(thisRd)) {
+        thisRd <- paste(thisRd, collapse = "")
+        write(thisRd, tmp)
+        # Define the output PDF file:
+        pdfFile <- path.expand(file.path(pdfDir , paste0(functionName, ".pdf")))
+        # Build the PDF
+        msg <- callr::rcmd(
+            "Rd2pdf", 
+            cmdargs = c(
+                "--force", 
+                "--no-index", 
+                paste0("--title=", packageName, "::", functionName), 
+                paste0("--output=", pdfFile), 
+                tmp
+            )
+        )
+        # Return the path to the PDF file:
+        pdfFile
+    }
+    else {
+        warning("Function ", functionName, " not exported from package ", packageName)
+        return(NULL)
+    }
+}
+
+getFunctionArgumentDescriptionsFromInstalledPackage <- function(functionName, packageName) {
+    
+    # The package needs to be loaded to get the documentation database:
+    library(packageName, character.only = TRUE)
+    # Get the Rd database:
+    db <- tools::Rd_db(packageName)
+    # Define a temporary file to write the Rd to
+    tmp <- tempfile()
+    # Paste the Rd to one string and write to the temporary file:
+    thisRd <- as.character(db[[paste0(functionName, ".Rd")]])
+    thisRd <- paste(thisRd, collapse = "")
+    write(thisRd, tmp)
+    # Read the file back in:
+    p <- tools::parse_Rd(tmp)
+    
+    # Detect the arguments, and get the valid arguments as those which are not line breaks:
+    atArguments <- sapply(p, attr, "Rd_tag") == "\\arguments"
+    argumentNames <- unlist(lapply(p[atArguments][[1]], head, 1))
+    validArgumentNames <- argumentNames != "\n"
+    
+    # Get and return the argument names and the descriptions:
+    argumentNames <- subset(argumentNames, validArgumentNames)
+    descriptions <- lapply(p[atArguments][[1]][validArgumentNames], function(x) paste0(unlist(x)[-1], collapse = " "))
+    names(descriptions) <- argumentNames
+    #list(
+    #    argumentName = argumentNames, 
+    #    description = descriptions
+    #)
+    descriptions
+}
+
+# Write single function PDF:
+writeFunctionPDFs <- function(sourceDir, pdfDir = NULL) {
+    
+    # Function to convert one documentation file to pdf:
+    writeFunctionPDf_one <- function(manFile, pdfDir) {
+        # Get the funciton name:
+        functionName <- tools::file_path_sans_ext(basename(manFile))
+        
+        # Define the output PDF file:
+        pdfFile <- path.expand(file.path(pdfDir , paste0(functionName, ".pdf")))
+        
+        # Build the PDF
+        msg <- callr::rcmd(
+            "Rd2pdf", 
+            cmdargs = c(
+                "--force", 
+                "--no-index", 
+                paste0("--title=", functionName), 
+                paste0("--output=", pdfFile), 
+                manFile
+            )
+        )
+        # Return the path to the PDF file:
+        pdfFile
+    }
+    
+    # Get the directories of the documentation files and the 
+    manDir <- file.path(sourceDir, "man")
+    if(length(pdfDir) == 0) {
+        pdfDir <- file.path(sourceDir, "inst", "functionPDFs")
+    }
+    if(file.exists(pdfDir)) {
+        unlink(pdfDir, force = TRUE, recursive = TRUE)
+    }
+    dir.create(pdfDir, showWarnings = FALSE)
+    
+    
+    # List all the documentation files:
+    manFiles <- list.files(manDir, full.names = TRUE)
+    # Convert all documentation files:
+    sapply(manFiles, writeFunctionPDf_one, pdfDir = pdfDir)
+}
+
+# Get and write the function argument descriptions of all documentation files:
+getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
+    
+    # Get the function argument descriptions of one documentation file:
+    getFunctionArgumentDescriptions_one <- function(manFile) {
+        # Parse the documentation file:
+        doc <- tools::parse_Rd(manFile)
+        
+        # Detect the arguments, and get the valid arguments as those which are not line breaks:
+        atArguments <- sapply(doc, attr, "Rd_tag") == "\\arguments"
+        if(any(atArguments)) {
+            argumentNames <- unlist(lapply(doc[atArguments][[1]], head, 1))
+            validArgumentNames <- argumentNames != "\n"
+            
+            # Get and return the argument names and the descriptions:
+            argumentNames <- subset(argumentNames, validArgumentNames)
+            descriptions <- lapply(doc[atArguments][[1]][validArgumentNames], function(x) paste0(unlist(x)[-1], collapse = " "))
+            names(descriptions) <- argumentNames
+            
+            descriptions
+        }
+        else {
+            descriptions <- NULL
+        }
+        descriptions
+    }
+    
+    
+    # Get the directories of the documentation files and the 
+    manDir <- file.path(sourceDir, "man")
+    if(length(docDir) == 0) {
+        docDir <- file.path(sourceDir, "inst", "functionArguments")
+    }
+    if(file.exists(docDir)) {
+        unlink(docDir, force = TRUE, recursive = TRUE)
+    }
+    dir.create(docDir, showWarnings = FALSE)
+    
+    
+    # List all the documentation files:
+    manFiles <- list.files(manDir, full.names = TRUE)
+    
+    # Convert all documentation files:
+    functionDocumentation <- lapply(manFiles, getFunctionArgumentDescriptions_one)
+    
+    # Get the funciton name:
+    functionNames <- basename(sapply(manFiles, tools::file_path_sans_ext))
+    names(functionDocumentation) <- functionNames
+    
+    functionDocumentationFile <- file.path(docDir, "functionArguments.rds")
+    saveRDS(functionDocumentation, functionDocumentationFile)
 }
 ##########

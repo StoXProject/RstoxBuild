@@ -159,7 +159,6 @@ versionScaled <- function(x){
 #' @export
 #' @rdname copyLatestToServer
 #' @noRd
-#' @keywords internal
 #'
 copyLatestToServer <- function(local, server, toCopy=c("Diff", "Output", "ProjOrig"), overwrite=TRUE, msg=FALSE, op="<", n=1){
 	
@@ -195,7 +194,6 @@ copyLatestToServer <- function(local, server, toCopy=c("Diff", "Output", "ProjOr
 #' @export
 #' @rdname copyLatestToServer
 #' @noRd
-#' @keywords internal
 #'
 copyStagedProjOrigFromServer <- function(server, local, overwrite=TRUE, op="<", n=1){
     localStagedProjOrig <- getTestFolderStructure(path.expand(local))$StagedProjOrig
@@ -219,7 +217,6 @@ copyStagedProjOrigFromServer <- function(server, local, overwrite=TRUE, op="<", 
 #' @export
 #' @rdname copyLatestToServer
 #' @noRd
-#' @keywords internal
 #'
 copyStagedProjOrigLocal <- function(dir){
     # Get the 
@@ -252,7 +249,7 @@ copyStagedProjOrigLocal <- function(dir){
 #' @param path	The relative path from the root.
 #'
 #' @export
-#' @keywords internal
+#' @noRd
 #'
 getServerPath <- function(root=list(windows="\\\\delphi", unix="/Volumes"), path="pc_prog/S2D/stox/StoXVerTest"){
 	root <- root[[.Platform$OS.type]]
@@ -279,7 +276,7 @@ getServerPath <- function(root=list(windows="\\\\delphi", unix="/Volumes"), path
 #' @param n			The number of runs (one runfor each version tested) to copy.
 #'
 #' @export
-#' @keywords internal
+#' @noRd
 #'
 copyCurrentToServer <- function(root=list(windows="\\\\delphi", unix="/Volumes"), path="pc_prog/S2D/stox/StoXVerTest", toCopy=c("Diff", "Output", "ProjOrig"), overwrite=FALSE, msg=FALSE, n=1){
 	server <- getServerPath(root=root, path=path)
@@ -299,7 +296,7 @@ copyCurrentToServer <- function(root=list(windows="\\\\delphi", unix="/Volumes")
 #' @param outputDir			The path to the directory in which to put the output files to be compared for the project (everything in "output" except trash files, baseline and baseline report output, and the project.xml file).
 #'
 #' @export
-#' @keywords internal
+#' @noRd
 #'
 runProject <- function(projectName, progressFile, outputDir, ind=NULL){
 	
@@ -428,7 +425,7 @@ all.equal2 <- function(target, current){
 #' @param nlines			The number of lines to display for diffs between text files.
 #'
 #' @export
-#' @keywords internal
+#' @noRd
 #'
 automatedRstoxTest <- function(root=list(windows="\\\\delphi", unix="/Volumes"), path="pc_prog/S2D/stox/StoXVerTest", copyFromServer=TRUE, process=c("run", "diff"),  diffs=c("Rdata", "images", "text", "baseline"), projectInd=NULL, nlines=50, mem.size=16e9, nwarnings=10000, n=1L, skipError=FALSE){
 #automatedRstoxTest <- function(dir, copyFromServer=TRUE, process=c("run", "diff"),  nlines=-1L, root=list(windows="\\\\delphi", unix="/Volumes"), path="pc_prog/S2D/stox/StoXAutoTest"){
@@ -1403,7 +1400,7 @@ now <- function(brackets=FALSE){
 #'
 #' @export
 #' @importFrom rJava J
-#' @keywords internal
+#' @noRd
 #'
 getRstoxVersion <- function(out=c("list", "string"), dependencies=getRstoxDef("internal_dependencies")){
 	Rstox.init()
