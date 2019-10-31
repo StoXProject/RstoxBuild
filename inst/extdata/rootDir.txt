@@ -4,5 +4,4 @@ user	rootDir
 "edvinf"	"~/code/github"
 "esmaelmh"	"D:/Projects/StoXProject"
 "sindrev"	"E:/Arbeid/Koding/StockAssessmentTools/StoxProject/RstoxData"
-
-
+"ibrahim"   "/home/user/repos/rstoxProject@github"

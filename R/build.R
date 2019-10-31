@@ -654,11 +654,11 @@ authors_RstoxFramework <- function(version = "1.0"){
 
 ##### RstoxData: #####
 title_RstoxData <- function(version = "1.0"){
-	"Read, filter and write input/output data for StoX"
+	"R libraries to parse and write fisheries biotic and acoustic data format"
 }
 
 description_RstoxData <- function(version = "1.0"){
-	"This package contains functions for reading, filtering and writing XML files and possibly other files used as input/output to StoX."
+	"Tools to fetch and manipulate various data formats for fisheries (mainly geared towards biotic and acoustic data)."
 }
 
 details_RstoxData <- function(version = "1.0"){
@@ -669,6 +669,7 @@ authors_RstoxData <- function(version = "1.0"){
 	list(
 		list(given="Ibrahim",       family="Umar",      role=c("cre", "aut"), email="ibrahim.umar@hi.no"), 
 		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut")),
+		list(given="Sindre",        family="Vatnehol",  role=c("aut")),
 		list(given="Arne Johannes", family="Holmin",    role=c("aut"))
 	)
 }
