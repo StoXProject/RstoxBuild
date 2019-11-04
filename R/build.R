@@ -39,7 +39,10 @@ buildRstoxPackage <- function(
 	misc = NULL, 
 	authors = NULL, 
 	check = FALSE, 
-	noRcpp = FALSE){
+	noRcpp = FALSE, 
+	addManual = TRUE, 
+	addIndividualManuals = TRUE
+){
 	
 	# Get the specifications of the package:
 	spec <- packageSpecs(

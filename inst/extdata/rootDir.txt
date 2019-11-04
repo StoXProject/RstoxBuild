@@ -3,5 +3,5 @@ user	rootDir
 "atlet"	"D:/GIT"
 "edvinf"	"~/code/github"
 "esmaelmh"	"D:/Projects/StoXProject"
-"sindrev"	"E:/Arbeid/Koding/StockAssessmentTools/StoxProject/RstoxData"
+"sindrev"	"E:/Arbeid/Koding/StockAssessmentTools/StoxProject"
 "ibrahim"   "/home/user/repos/rstoxProject@github"
