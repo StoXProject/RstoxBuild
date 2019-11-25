@@ -123,7 +123,7 @@ buildRstoxPackage <- function(
 	}
 	
 	# Get and write an rds file with function argument descriptions for use by the GUI:
-	#getFunctionArgumentDescriptions(spec$dir)
+	getFunctionArgumentDescriptions(spec$dir)
 	
 	# Add linkedTo: Rcpp in the DESCRIPTION:
 	if(spec$useCpp){
