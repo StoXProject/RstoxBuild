@@ -751,7 +751,6 @@ setSlashes <- function(x, back=FALSE, platform=NULL){
 }
 
 # Function for getting the common files:
-#' @importFrom tools file_ext
 getFilesByExt <- function(dir1, dir2, ext=NULL, recursive=TRUE, ignore.case=TRUE){
 	# Function for getting all image files in a vector of files (returning a list with names corresponding to the file extensions):
 	getFilesByExtOne <- function(x, ext=NULL){
@@ -1025,10 +1024,6 @@ diffRData  <- function(files, progressFile){
 }
 
 # Get diffs between images:
-#' @importFrom tools file_ext
-#' @importFrom png readPNG writePNG
-#' @importFrom jpeg readJPEG writeJPEG
-#' @importFrom tiff readTIFF writeTIFF
 diffImages <- function(files, progressFile, diffdir){
 	diffImagesOne <- function(file, dir1, dir2, progressFile, diffdir){
 		
@@ -1399,7 +1394,6 @@ now <- function(brackets=FALSE){
 #' @param out	The type of object to return.
 #'
 #' @export
-#' @importFrom rJava J
 #' @noRd
 #'
 getRstoxVersion <- function(out=c("list", "string"), dependencies=getRstoxDef("internal_dependencies")){

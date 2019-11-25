@@ -3,19 +3,20 @@ Title: Package for building all Rstox packages
 Version: 1.0
 Authors@R: c(
   person(given = "Arne Johannes", family = "Holmin", role = c("cre", "aut"), email = "arnejh@hi.no"))
-Depends: R (>= 3.5)
-Description: This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects.
+Depends: R (>= 3.6)
+Description: This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects.
 URL: https://github.com/StoXProject/RstoxBuild
 BugReports: https://github.com/StoXProject/RstoxBuild/issues
 License: LGPL-3
 LazyData: true
-RoxygenNote: 6.1.1
 Imports: 
-    devtools,
-    jpeg,
-    png,
-    rJava,
-    tiff,
-    usethis
+    usethis,
+    devtools
 Suggests: 
-    Rstox
+    Rstox,
+    png,
+    jpeg,
+    tiff,
+    rJava,
+    callr
+RoxygenNote: 6.1.1

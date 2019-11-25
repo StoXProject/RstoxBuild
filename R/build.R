@@ -3,7 +3,7 @@
 # 0.	Rstox
 # 1.	RstoxFramework
 # 2.	RstoxData
-# 3.	RstoxECA
+# 3.	RstoxFDA
 # 4.	RstoxSurveyPlanner
 # 5a.	RstoxTempdoc
 # 5b.	RstoxBuild
@@ -16,7 +16,7 @@
 #' \code{packageSpecs} gets all specifications of the package from separate funcitons for each package into a list.\cr \cr
 #'
 #' @param dir	The directory holding the package structure.
-#' @param check	Logical: If TRUE run devtools::check() on the package.
+#' @param check	Logical: If TRUE run devtools::check() on the package.\code{\link[RstoxBase]{StratumArea}}
 #' 
 #' @export
 #' @rdname buildRstoxPackage
@@ -25,7 +25,7 @@ buildRstoxPackage <- function(
 	packageName, 
 	version = "1.0", 
 	Rversion = "3.5", 
-	pckversion = NULL, 
+	imports = NULL, 
 	suggests = NULL, 
 	githubRoot = "https://github.com/StoXProject", 
 	onCran = FALSE, 
@@ -40,16 +40,16 @@ buildRstoxPackage <- function(
 	authors = NULL, 
 	check = FALSE, 
 	noRcpp = FALSE, 
-	addManual = TRUE, 
-	addIndividualManuals = TRUE
+	addManual = FALSE, 
+	addIndividualManuals = FALSE
 ){
 	
-	# Get the specifications of the package:
+    # Get the specifications of the package:
 	spec <- packageSpecs(
 		packageName = packageName, 
 		version = version, 
 		Rversion = Rversion, 
-		pckversion = pckversion, 
+		imports = imports, 
 		suggests = suggests, 
 		githubRoot = githubRoot, 
 		onCran = onCran, 
@@ -81,7 +81,7 @@ buildRstoxPackage <- function(
 	
 	
 	# Clear the installed package:
-	try(lapply(.libPaths(), function(x) utils::remove.packages(spec$packageName, x)), silent=TRUE)
+	try(lapply(.libPaths(), function(x) utils::remove.packages(spec$packageName, x)), silent = TRUE)
 	
 	##### Write the onLoad.R file: #####
 	if(length(spec$.onLoad)){
@@ -106,34 +106,35 @@ buildRstoxPackage <- function(
 	DESCRIPTION <- getDESCRIPTION(spec)
 	DESCRIPTIONFile <- file.path(spec$dir, "DESCRIPTION")
 	write(DESCRIPTION, DESCRIPTIONFile)
+	
+	# Alter the DESCRIPTION file to contain the imports listed in the NAMESPACE file. This must take place AFTER creating the documentation:
+	addImportsToDESCRIPTION(spec)
 	##########
 	
 
 	##### Create documentation: #####
 	# Remove current documentation and then re-document without C++:
-	unlink(file.path(spec$dir, "man"), recursive=TRUE, force=TRUE)
+	unlink(file.path(spec$dir, "man"), recursive = TRUE, force = TRUE)
 	devtools::document(spec$dir)
 	
 	# Build individual function PDFs for use by the GUI:
-	writeFunctionPDFs(spec$dir)
+	if(addIndividualManuals) {
+	    writeFunctionPDFs(spec$dir)
+	}
 	
 	# Get and write an rds file with function argument descriptions for use by the GUI:
-	getFunctionArgumentDescriptions(spec$dir)
-	
-	# Alter the DESCRIPTION file to contain the imports listed in the NAMESPACE file. This must take place AFTER creating the documentation:
-	spec$imports <- getImports(spec)
-	addImportsToDESCRIPTION(spec)
+	#getFunctionArgumentDescriptions(spec$dir)
 	
 	# Add linkedTo: Rcpp in the DESCRIPTION:
 	if(spec$useCpp){
 	    if(!noRcpp){
 	        usethis::use_rcpp()
 	        # Add the C++ specifics to the pkgnameFile:
-	        write(spec$Rcpp, pkgnameFile, append=TRUE)
+	        write(spec$Rcpp, pkgnameFile, append = TRUE)
 	    }
 	    # Also delete shared objects for safety:
-	    sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names=TRUE)
-	    unlink(sharedObjects, recursive=TRUE, force=TRUE)
+	    sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names = TRUE)
+	    unlink(sharedObjects, recursive = TRUE, force = TRUE)
 	}
 	
 	##### Run R cmd check with devtools: #####
@@ -153,27 +154,31 @@ buildRstoxPackage <- function(
 	# devtools::unload(spec$packageName)
 	packageString <- paste("package", spec$packageName, sep=":")
 	if(packageString %in% search()){
-		detach(packageString, unload=TRUE, character.only=TRUE)
+		detach(packageString, unload = TRUE, character.only = TRUE)
 	}
 	##########
 	
 	##### Install the package: #####
 	utils::install.packages(spec$dir, repos=NULL, type="source", lib=.libPaths()[1])
+	
 	# Build and open documentation pdf:
-	pkg <- file.path(.libPaths()[1], spec$packageName)
-	path <- file.path(pkg, "extdata", "manual")
-	dir.create(path, recursive=TRUE)
-	temp <- devtools::build_manual(pkg=pkg, path=path)
-	print(path)
-	# Open the PDF:
-	pdfFile <- list.files(path, full.names=TRUE)[1]
-	system(paste0("open \"", pdfFile, "\""))
+	if(addManual) {
+	    pkg <- file.path(.libPaths()[1], spec$packageName)
+	    path <- file.path(pkg, "extdata", "manual")
+	    dir.create(path, recursive = TRUE)
+	    temp <- devtools::build_manual(pkg=pkg, path=path)
+	    print(path)
+	    
+	    # Open the PDF:
+	    pdfFile <- list.files(path, full.names = TRUE)[1]
+	    system(paste0("open \"", pdfFile, "\""))
+	}
 	##########
 	
 	# Load the package:
-	library(spec$packageName, character.only=TRUE)
+	library(spec$packageName, character.only = TRUE)
 	
-	path
+	#path
 }
 #' 
 #' @export
@@ -183,7 +188,7 @@ packageSpecs <- function(
 	packageName, 
 	version = "1.0", 
 	Rversion = "3.5", 
-	pckversion = NULL, 
+	imports = NULL, 
 	suggests = NULL, 
 	githubRoot = "https://github.com/StoXProject", 
 	onCran = FALSE, 
@@ -202,7 +207,7 @@ packageSpecs <- function(
 	if(is.character(packageName) && !file.exists(packageName) && !grepl('\\\\|/', packageName)){
 		if(length(rootDir) == 0){
 			user <- Sys.info()["user"]
-			rootDir <- utils::read.table(system.file("extdata", "rootDir.txt", package="RstoxBuild"), header=TRUE)
+			rootDir <- utils::read.table(system.file("extdata", "rootDir.txt", package="RstoxBuild"), header = TRUE)
 			rootDir <- rootDir$rootDir[rootDir$user == user]
 		}
 		# The path to the package source code folder should contain a folder named by the package name, containing various optional files and folders like "test" or "temp", and a sub folder also named by the oackage name, which is the folder containing the package source code with DESCRIPTION, NAMESPACE, sub folder "R" etc.
@@ -230,7 +235,7 @@ packageSpecs <- function(
 		packageName = packageName, 
 		version = version, 
 		Rversion = Rversion, 
-		pckversion = pckversion, 
+		imports = imports, 
 		suggests = suggests, 
 		# Mandatory objects:
 		title = title, 
@@ -273,7 +278,7 @@ packageSpecs <- function(
 			spec$useCpp <- TRUE
 		}
 	}
-	spec$src_ <- file.path(spec$dir, "src_")
+	#spec$src_ <- file.path(spec$dir, "src_")
 	spec$Rcpp <- c(
 		paste0("#' @useDynLib ", spec$packageName, ", .registration = TRUE"), 
 		"#' @importFrom Rcpp sourceCpp", 
@@ -337,10 +342,10 @@ getDESCRIPTION <- function(spec){
 #' 
 getREADME <- function(spec){
 	
-	# Add devtools to the imports, since it is used for installing:
-	if(spec$onCran){
-		spec$imports <- c(spec$imports, "devtools")
-	}
+	# Add devtools to the imports, since it is used for installing: THIS SEEMS WRONG
+	#if(spec$onCran){
+	#	spec$imports <- c(spec$imports, "devtools")
+	#}
 	
 	# Write package and R version in the first two lines. THIS SHOULD NEVER BE CHANGED, SINCE STOX READS THESE TWO LINES TO CHECK VERSIONS:
 	header <- c(
@@ -424,9 +429,9 @@ getImports <- function(spec){
 		atImports <- grep("import", NAMESPACE)
 		imports <- NAMESPACE[atImports]
 		if(length(atImports)){
-			imports <- sapply(strsplit(imports, "(", fixed=TRUE), "[", 2)
-			imports <- sapply(strsplit(imports, ")", fixed=TRUE), "[", 1)
-			imports <- unique(sapply(strsplit(imports, ",", fixed=TRUE), "[", 1))
+			imports <- sapply(strsplit(imports, "(", fixed = TRUE), "[", 2)
+			imports <- sapply(strsplit(imports, ")", fixed = TRUE), "[", 1)
+			imports <- unique(sapply(strsplit(imports, ",", fixed = TRUE), "[", 1))
 			imports <- discardBasePackages(imports)
 		}
 	}
@@ -444,24 +449,28 @@ addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
 	
 	# Add imports from the NAMESPACE file (via 'spec'):
 	if(length(spec$imports)){
-		use_package_with_min_version <- function(pck, pckversion){
-			min_version <- if(length(pckversion[[pck]])) pckversion[[pck]] else NULL
-			usethis::use_package(pck, type="imports", min_version=min_version)
-		}
-		
-		lapply(spec$imports, use_package_with_min_version, pckversion=spec$pckversion)
-		
-		#cat("Imports:\n		", file=DESCRIPTIONFile, append=TRUE)
-		#cat(paste(spec$imports, collapse=",\n		"), file=DESCRIPTIONFile, append=TRUE)
-		#cat("", file=DESCRIPTIONFile, append=TRUE)
+		use_package_with_min_version(
+		    spec$imports, 
+		    type = "imports"
+	    )
+		#cat("Imports:\n		", file=DESCRIPTIONFile, append = TRUE)
+		#cat(paste(spec$imports, collapse=",\n		"), file=DESCRIPTIONFile, append = TRUE)
+		#cat("", file=DESCRIPTIONFile, append = TRUE)
 	}
 	# Add also the suggests:
 	if(length(spec$suggests)){
-		lapply(spec$suggests, usethis::use_package, type="suggests")
-	}
+	    use_package_with_min_version(
+	        spec$suggests, 
+	        type = "suggests"
+	    )
+    }
 	# Add also the linkingto:
 	if(length(spec$linkingto)){
-		lapply(spec$linkingto, usethis::use_package, type="LinkingTo")
+	    use_package_with_min_version(
+	        spec$linkingto, 
+	        type = "linkingto"
+	    )
+	    #lapply(spec$linkingto, usethis::use_package, type="LinkingTo")
 	}
 	
 	return(DESCRIPTIONFile)
@@ -663,20 +672,20 @@ authors_RstoxData <- function(version = "1.0"){
 }
 ##########
 
-##### RstoxECA: #####
-title_RstoxECA <- function(version = "1.0"){
+##### RstoxFDA: #####
+title_RstoxFDA <- function(version = "1.0"){
 	"Estimated Catch at Age with Rstox"
 }
 
-description_RstoxECA <- function(version = "1.0"){
+description_RstoxFDA <- function(version = "1.0"){
 	"This package is used to run the Estimated Catch at Age model through the Reca package developed by the Norwegian Computing Center."
 }
 
-details_RstoxECA <- function(version = "1.0"){
+details_RstoxFDA <- function(version = "1.0"){
 	"The estimated catch at age (ECA) model uses the correlation structure in biotic (fishery independent) data to distribute age readings from cathes (landings) onto the biotic data. The ECA model is described in Hirst, D., Aanes, S., Storvik, G., Huseby, R. B., & Tvete, I. F. (2004). Estimating catch at age from market sampling data by using a Bayesian hierarchical model. Journal of the Royal Statistical Society: Series C (Applied Statistics), 53(1), 1-14."
 }
 
-authors_RstoxECA <- function(version = "1.0"){
+authors_RstoxFDA <- function(version = "1.0"){
 	list(
 		list(given="Arne Johannes", family="Holmin",    role=c("cre", "aut"), email="edvin.fuglebakk@hi.no"), 
 		list(given="Edvin",         family="Fuglebakk", role=c("aut"))
@@ -734,7 +743,7 @@ title_RstoxBuild <- function(version = "1.0"){
 }
 
 description_RstoxBuild <- function(version = "1.0"){
-    "This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
+    "This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
 }
 
 details_RstoxBuild <- function(version = "1.0"){
@@ -888,7 +897,7 @@ getNews <- function(NEWSfile, version = "1.0", NEWSBullet="*", READMEBullet="#")
 		thisl <- l[[version]]
 		thisl <- trimws(thisl)
 		thisl <- thisl[startsWith(thisl, NEWSBullet)]
-		thisl <- sub(NEWSBullet, "", thisl, fixed=TRUE)
+		thisl <- sub(NEWSBullet, "", thisl, fixed = TRUE)
 		thisl <- paste0(READMEBullet, " ", seq_along(thisl), ". ", thisl)
 	}
 	else{
@@ -899,7 +908,7 @@ getNews <- function(NEWSfile, version = "1.0", NEWSBullet="*", READMEBullet="#")
 }
 # Is the release a master/beta release (judging from the number of dots in the version)?:
 isMaster <- function(version = "1.0"){
-	length(gregexpr(".", version, fixed=TRUE)[[1]]) == 1
+	length(gregexpr(".", version, fixed = TRUE)[[1]]) == 1
 }
 # Get one author string:
 getAuthor <- function(x){
@@ -1050,12 +1059,12 @@ writeFunctionPDFs <- function(sourceDir, pdfDir = NULL) {
     # Get the directories of the documentation files and the 
     manDir <- file.path(sourceDir, "man")
     if(length(pdfDir) == 0) {
-        pdfDir <- file.path(sourceDir, "inst", "functionPDFs")
+        pdfDir <- file.path(sourceDir, "inst", "extdata", "functionPDFs")
     }
     if(file.exists(pdfDir)) {
         unlink(pdfDir, force = TRUE, recursive = TRUE)
     }
-    dir.create(pdfDir, showWarnings = FALSE)
+    dir.create(pdfDir, showWarnings = FALSE, recursive = TRUE)
     
     
     # List all the documentation files:
@@ -1095,11 +1104,12 @@ getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
     # Get the directories of the documentation files and the 
     manDir <- file.path(sourceDir, "man")
     if(length(docDir) == 0) {
-        docDir <- file.path(sourceDir, "inst", "functionArguments")
+        docDir <- file.path(sourceDir, "inst", "extdata")
     }
-    if(file.exists(docDir)) {
-        unlink(docDir, force = TRUE, recursive = TRUE)
-    }
+    docFile <- 
+    #if(file.exists(docDir)) {
+    #    unlink(docDir, force = TRUE, recursive = TRUE)
+    #}
     dir.create(docDir, showWarnings = FALSE)
     
     
@@ -1115,5 +1125,22 @@ getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
     
     functionDocumentationFile <- file.path(docDir, "functionArguments.rds")
     saveRDS(functionDocumentation, functionDocumentationFile)
+}
+
+# Function to add a package to the DESCRIPTION file, optionally with minimum version:
+use_package_with_min_version <- function(packageList, type = "imports"){
+    
+    # Assure that packageList is a named list:
+    if(!is.list(packageList)) {
+        packageList <- structure(vector("list", length(packageList)), names = packageList)
+        }
+    
+    # Add each package with version if present:
+    mapply(
+        usethis::use_package, 
+        package = names(packageList), 
+        type = type, 
+        min_version = packageList
+    )
 }
 ##########

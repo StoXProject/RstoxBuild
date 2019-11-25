@@ -1,8 +1,8 @@
-# RstoxBuild version: 1.0 (latest beta, 2019-10-31)
-# R version: 3.5
+# RstoxBuild version: 1.0 (latest beta, 2019-11-25)
+# R version: 3.6
 
 
-# This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxECA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects.
+# This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects.
 
 
 # Install the latest developer version
