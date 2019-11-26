@@ -674,7 +674,7 @@ authors_RstoxData <- function(version = "1.0"){
 
 ##### RstoxFDA: #####
 title_RstoxFDA <- function(version = "1.0"){
-	"Fisheries Dependent Analysis with RstoX."
+	"Fisheries Dependent Analysis with RstoX"
 }
 
 description_RstoxFDA <- function(version = "1.0"){
