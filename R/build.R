@@ -674,15 +674,15 @@ authors_RstoxData <- function(version = "1.0"){
 
 ##### RstoxFDA: #####
 title_RstoxFDA <- function(version = "1.0"){
-	"Estimated Catch at Age with Rstox"
+	"Fisheries Dependent Analysis with RstoX."
 }
 
 description_RstoxFDA <- function(version = "1.0"){
-	"This package is used to run the Estimated Catch at Age model through the Reca package developed by the Norwegian Computing Center."
+	"This package is used to for fisheries dependent analysis. Including running the Estimated Catch at Age model through the Reca package developed by the Norwegian Computing Center."
 }
 
 details_RstoxFDA <- function(version = "1.0"){
-	"The estimated catch at age (ECA) model uses the correlation structure in biotic (fishery independent) data to distribute age readings from cathes (landings) onto the biotic data. The ECA model is described in Hirst, D., Aanes, S., Storvik, G., Huseby, R. B., & Tvete, I. F. (2004). Estimating catch at age from market sampling data by using a Bayesian hierarchical model. Journal of the Royal Statistical Society: Series C (Applied Statistics), 53(1), 1-14."
+	"The estimated catch at age (ECA) model uses the correlation structure in fisheries dependent data to distribute age readings from cathes (samples) onto the total reported landings. The ECA model is described in Hirst, D., Aanes, S., Storvik, G., Huseby, R. B., & Tvete, I. F. (2004). Estimating catch at age from market sampling data by using a Bayesian hierarchical model. Journal of the Royal Statistical Society: Series C (Applied Statistics), 53(1), 1-14."
 }
 
 authors_RstoxFDA <- function(version = "1.0"){
