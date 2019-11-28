@@ -1110,7 +1110,7 @@ getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
     #if(file.exists(docDir)) {
     #    unlink(docDir, force = TRUE, recursive = TRUE)
     #}
-    dir.create(docDir, showWarnings = FALSE)
+    dir.create(docDir, recursive = TRUE, showWarnings = FALSE)
     
     
     # List all the documentation files:
