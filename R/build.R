@@ -1106,7 +1106,7 @@ getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
     if(length(docDir) == 0) {
         docDir <- file.path(sourceDir, "inst", "extdata")
     }
-    docFile <- 
+    #docFile <- 
     #if(file.exists(docDir)) {
     #    unlink(docDir, force = TRUE, recursive = TRUE)
     #}
@@ -1122,6 +1122,7 @@ getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
     # Get the funciton name:
     functionNames <- basename(sapply(manFiles, tools::file_path_sans_ext))
     names(functionDocumentation) <- functionNames
+    
     
     functionDocumentationFile <- file.path(docDir, "functionArguments.rds")
     saveRDS(functionDocumentation, functionDocumentationFile)
