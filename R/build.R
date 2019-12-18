@@ -328,7 +328,8 @@ getDESCRIPTION <- function(spec){
 		"URL" = URL, 
 		"BugReports" = BugReports, 
 		"License" = spec$license, 
-		"LazyData" = "true"
+		"LazyData" = "true", 
+		"Encoding" = "UTF-8"
 	)
 	out <- paste(names(out), out, sep=": ", collapse="\n")
 	# Add a new line ending the file:
@@ -665,9 +666,10 @@ details_RstoxData <- function(version = "1.0"){
 authors_RstoxData <- function(version = "1.0"){
 	list(
 		list(given="Ibrahim",       family="Umar",      role=c("cre", "aut"), email="ibrahim.umar@hi.no"), 
-		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut")),
+		#list(given="Mikko Juhani",  family="Vihtakari", role=c("aut")),
 		list(given="Sindre",        family="Vatnehol",  role=c("aut")),
-		list(given="Arne Johannes", family="Holmin",    role=c("aut"))
+		list(given="Arne Johannes", family="Holmin",    role=c("aut")),
+		list(given="Edvin",         family="Fuglebakk", role=c("aut"))
 	)
 }
 ##########
