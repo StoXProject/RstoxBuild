@@ -689,7 +689,7 @@ details_RstoxFDA <- function(version = "1.0"){
 
 authors_RstoxFDA <- function(version = "1.0"){
 	list(
-		list(given="Arne Johannes", family="Holmin",    role=c("cre", "aut"), email="edvin.fuglebakk@hi.no"), 
+		list(given="Arne Johannes", family="Holmin",    role=c("cre", "aut"), email="arnejh@hi.no"), 
 		list(given="Edvin",         family="Fuglebakk", role=c("aut"))
 	)
 }
