@@ -642,7 +642,7 @@ authors_RstoxFramework <- function(version = "1.0"){
 .onLoad_RstoxFramework <- function(version = "1.0"){
     out <- c(
         ".onLoad <- function(libname, pkgname){", 
-        "\t# Initiate the Rstox envitonment:", 
+        "\t# Initiate the RstoxFramework envitonment:", 
         "\tinitiateRstoxFramework()", 
         "} "
     )
@@ -776,6 +776,16 @@ authors_RstoxBase <- function(version = "1.0"){
     list(
         list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
     )
+}
+
+.onLoad_RstoxBase <- function(version = "1.0"){
+    out <- c(
+        ".onLoad <- function(libname, pkgname){", 
+        "\t# Initiate the RstoxBase envitonment:", 
+        "\tinitiateRstoxBase()", 
+        "} "
+    )
+    paste(out, collapse="\n")
 }
 ##########
 
