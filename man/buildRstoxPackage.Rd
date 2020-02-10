@@ -5,20 +5,47 @@
 \alias{packageSpecs}
 \title{Function for building Rstox packages}
 \usage{
-buildRstoxPackage(packageName, version = "1.0", Rversion = "3.5",
-  imports = NULL, suggests = NULL,
-  githubRoot = "https://github.com/StoXProject", onCran = FALSE,
-  license = "LGPL-3", rootDir = NULL, title = NULL,
-  description = NULL, details = NULL, .onLoad = NULL,
-  .onAttach = NULL, misc = NULL, authors = NULL, check = FALSE,
-  noRcpp = FALSE, addManual = FALSE, addIndividualManuals = FALSE)
+buildRstoxPackage(
+  packageName,
+  version = "1.0",
+  Rversion = "3.5",
+  imports = NULL,
+  suggests = NULL,
+  githubRoot = "https://github.com/StoXProject",
+  onCran = FALSE,
+  license = "LGPL-3",
+  rootDir = NULL,
+  title = NULL,
+  description = NULL,
+  details = NULL,
+  .onLoad = NULL,
+  .onAttach = NULL,
+  misc = NULL,
+  authors = NULL,
+  check = FALSE,
+  noRcpp = FALSE,
+  addManual = FALSE,
+  addIndividualManuals = FALSE
+)
 
-packageSpecs(packageName, version = "1.0", Rversion = "3.5",
-  imports = NULL, suggests = NULL,
-  githubRoot = "https://github.com/StoXProject", onCran = FALSE,
-  license = "LGPL-3", rootDir = NULL, title = NULL,
-  description = NULL, details = NULL, authors = NULL,
-  .onLoad = NULL, .onAttach = NULL, misc = NULL)
+packageSpecs(
+  packageName,
+  version = "1.0",
+  Rversion = "3.5",
+  imports = NULL,
+  suggests = NULL,
+  githubRoot = "https://github.com/StoXProject",
+  onCran = FALSE,
+  license = "LGPL-3",
+  rootDir = NULL,
+  title = NULL,
+  description = NULL,
+  details = NULL,
+  authors = NULL,
+  .onLoad = NULL,
+  .onAttach = NULL,
+  misc = NULL
+)
 }
 \arguments{
 \item{check}{Logical: If TRUE run devtools::check() on the package.\code{\link[RstoxBase]{StratumArea}}}
