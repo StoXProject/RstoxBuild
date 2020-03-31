@@ -7,11 +7,12 @@
 \usage{
 buildRstoxPackage(
   packageName,
-  version = "1.0",
+  accountName = "StoXProject",
+  version = "current",
   Rversion = "3.5",
   imports = NULL,
   suggests = NULL,
-  githubRoot = "https://github.com/StoXProject",
+  remotes = NULL,
   onCran = FALSE,
   license = "LGPL-3",
   rootDir = NULL,
@@ -30,11 +31,12 @@ buildRstoxPackage(
 
 packageSpecs(
   packageName,
-  version = "1.0",
+  accountName = "StoXProject",
+  version = "current",
   Rversion = "3.5",
   imports = NULL,
   suggests = NULL,
-  githubRoot = "https://github.com/StoXProject",
+  remotes = NULL,
   onCran = FALSE,
   license = "LGPL-3",
   rootDir = NULL,

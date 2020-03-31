@@ -8,6 +8,82 @@
 # 5a.	RstoxTempdoc
 # 5b.	RstoxBuild
 
+
+# Unused functions
+githupPaths <- function(element = c("github", "api")) {
+	element <- match.arg(element)
+	out <- list(
+		github = "https://github.com", 
+		api = "https://api.github.com/repos"
+	)
+	return(out[[element]])
+}
+
+getGithubURL <- function(packageName, accountName = "StoXProject") {
+	paste(githupPaths("github"), accountName, packageName, sep = "/")
+}
+
+getGithubAPI <- function(packageName, accountName = "StoXProject") {
+	paste(githupPaths("api"), accountName, packageName, "releases", sep = "/")
+}
+
+# Function to get a list of release names of a package:
+getReleaseNames <- function(packageName, accountName = "StoXProject") {
+	# Build the URL to list the releases:
+	URL <- getGithubAPI(packageName = packageName, accountName = accountName)
+	# Download the list of releases to a temporary file:
+	tmp <- tempfile()
+	utils::download.file(URL, tmp)
+	json <- jsonlite::read_json(tmp)
+	releases <- sapply(json, "[[", "tag_name")
+	
+	return(releases)
+}
+
+# Get latest release version
+getLatestReleaseVersion <- function(packageName, accountName = "StoXProject", default = "0.0.1") {
+	releaseNames <- getReleaseNames(
+		packageName = packageName, 
+		accountName = accountName
+	)
+	lastVersion <- sort(sub("^\\D+(\\d)", "\\1", releaseNames), decreasing = TRUE)[1]
+	if(is.na(lastVersion)) {
+		lastVersion <- default
+	}
+	return(lastVersion)
+}
+
+
+
+# Function to get the current version from the file RstoxVersions.R in the Rstox_utils repository:
+getCurrentVersion <- function(packageName) {
+	
+	versionFile <- "https://raw.githubusercontent.com/Sea2Data/Rstox_utils/master/Build/RstoxVersions.R"
+	# Try sourcing the list of versions from GitHub:
+	temp <- tryCatch(
+		{
+			source(versionFile)
+			TRUE
+		}, 
+		error = function(err) {
+			FALSE
+		}
+	)
+	
+	if(!temp) {
+		warning("Internet connection failed, or for some other reason the file '", versionFile, "' could not be reached. Specify the version manually using 'version' in RstoxBuild::buildRstoxPackage().")
+	}	
+	
+	version <- RstoxVersions[[packageName]]
+	if(length(version) == 0) {
+		stop("The package ", packageName, " is not present in the file ", versionFile, ".")
+	}
+	
+	return(version)
+}
+
+
+
 ##############################################
 ##############################################
 #' Function for building Rstox packages
@@ -23,11 +99,12 @@
 # 
 buildRstoxPackage <- function(
 	packageName, 
-	version = "1.0", 
+	accountName = "StoXProject", 
+	version = "current", 
 	Rversion = "3.5", 
 	imports = NULL, 
 	suggests = NULL, 
-	githubRoot = "https://github.com/StoXProject", 
+	remotes = NULL, 
 	onCran = FALSE, 
 	license = "LGPL-3", 
 	rootDir = NULL, 
@@ -44,14 +121,15 @@ buildRstoxPackage <- function(
 	addIndividualManuals = FALSE
 ){
 	
-    # Get the specifications of the package:
+	# Get the specifications of the package:
 	spec <- packageSpecs(
 		packageName = packageName, 
+		accountName = accountName, 
 		version = version, 
 		Rversion = Rversion, 
 		imports = imports, 
 		suggests = suggests, 
-		githubRoot = githubRoot, 
+		remotes = remotes, 
 		onCran = onCran, 
 		license = license, 
 		rootDir = rootDir, 
@@ -113,13 +191,14 @@ buildRstoxPackage <- function(
 	
 
 	##### Create documentation: #####
-	# Remove current documentation and then re-document without C++:
+	# Remove current documentation and NAMESPACE, and then re-document without C++:
 	unlink(file.path(spec$dir, "man"), recursive = TRUE, force = TRUE)
+	unlink(NAMESPACEFile, force = TRUE)
 	devtools::document(spec$dir)
 	
 	# Build individual function PDFs for use by the GUI:
 	if(addIndividualManuals) {
-	    writeFunctionPDFs(spec$dir)
+		writeFunctionPDFs(spec$dir)
 	}
 	
 	# Get and write an rds file with function argument descriptions for use by the GUI:
@@ -127,14 +206,14 @@ buildRstoxPackage <- function(
 	
 	# Add linkedTo: Rcpp in the DESCRIPTION:
 	if(spec$useCpp){
-	    if(!noRcpp){
-	        usethis::use_rcpp()
-	        # Add the C++ specifics to the pkgnameFile:
-	        write(spec$Rcpp, pkgnameFile, append = TRUE)
-	    }
-	    # Also delete shared objects for safety:
-	    sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names = TRUE)
-	    unlink(sharedObjects, recursive = TRUE, force = TRUE)
+		if(!noRcpp){
+			usethis::use_rcpp()
+			# Add the C++ specifics to the pkgnameFile:
+			write(spec$Rcpp, pkgnameFile, append = TRUE)
+		}
+		# Also delete shared objects for safety:
+		sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names = TRUE)
+		unlink(sharedObjects, recursive = TRUE, force = TRUE)
 	}
 	
 	##### Run R cmd check with devtools: #####
@@ -163,15 +242,15 @@ buildRstoxPackage <- function(
 	
 	# Build and open documentation pdf:
 	if(addManual) {
-	    pkg <- file.path(.libPaths()[1], spec$packageName)
-	    path <- file.path(pkg, "extdata", "manual")
-	    dir.create(path, recursive = TRUE)
-	    temp <- devtools::build_manual(pkg=pkg, path=path)
-	    print(path)
-	    
-	    # Open the PDF:
-	    pdfFile <- list.files(path, full.names = TRUE)[1]
-	    system(paste0("open \"", pdfFile, "\""))
+		pkg <- file.path(.libPaths()[1], spec$packageName)
+		path <- file.path(pkg, "extdata", "manual")
+		dir.create(path, recursive = TRUE)
+		temp <- devtools::build_manual(pkg=pkg, path=path)
+		print(path)
+		
+		# Open the PDF:
+		pdfFile <- list.files(path, full.names = TRUE)[1]
+		system(paste0("open \"", pdfFile, "\""))
 	}
 	##########
 	
@@ -186,11 +265,12 @@ buildRstoxPackage <- function(
 # 
 packageSpecs <- function(
 	packageName, 
-	version = "1.0", 
+	accountName = "StoXProject", 
+	version = "current", 
 	Rversion = "3.5", 
 	imports = NULL, 
 	suggests = NULL, 
-	githubRoot = "https://github.com/StoXProject", 
+	remotes = NULL, 
 	onCran = FALSE, 
 	license = "LGPL-3", 
 	rootDir = NULL, 
@@ -218,13 +298,18 @@ packageSpecs <- function(
 	dir <- packageName
 	packageName <- basename(packageName)
 	
+	# Get version:
+	if(identical(version, "current")) {
+		version <- getCurrentVersion(packageName)
+	}
+	
 	# Get NEWS file and NEWS;
 	NEWSfile <- file.path(dir, "NEWS")
 	if(startsWith(readLines(NEWSfile, 1), "#")){
-		NEWS <- getNews_old(NEWSfile, version=version)
+		NEWS <- getNews_old(NEWSfile, version = version)
 	}
 	else{
-		NEWS <- getNews(NEWSfile, version=version)
+		NEWS <- getNews(NEWSfile, version = version)
 	}
 	
 	
@@ -233,10 +318,12 @@ packageSpecs <- function(
 		# Paths, names and dependencies:
 		dir = dir, 
 		packageName = packageName, 
+		accountName = accountName, 
 		version = version, 
 		Rversion = Rversion, 
 		imports = imports, 
 		suggests = suggests, 
+		remotes = remotes, 
 		# Mandatory objects:
 		title = title, 
 		description = description, 
@@ -248,7 +335,6 @@ packageSpecs <- function(
 		misc = misc, 
 		# Other specs:
 		onCran = onCran, 
-		githubRoot = githubRoot, 
 		license = license, 
 		NEWSfile = NEWSfile, 
 		NEWS = NEWS
@@ -259,7 +345,7 @@ packageSpecs <- function(
 	mandatoryORoptional <- c(mandatory, optional)
 	
 	# Get the missing package documentation objects from memory:
-	spec[mandatoryORoptional] <- lapply(mandatoryORoptional, getPackageItem, spec=spec, packageName=packageName, version=version)
+	spec[mandatoryORoptional] <- lapply(mandatoryORoptional, getPackageItem, spec=spec, packageName=packageName, version = version)
 	
 	# Check for the existence of the mandatory objects:
 	empty <- lengths(spec[mandatory]) == 0
@@ -314,7 +400,11 @@ getDESCRIPTION <- function(spec){
 	}
 	
 	# Add package and bug reports URL:
-	URL = file.path(spec$githubRoot, spec$packageName)
+	URL <- getGithubURL(
+		packageName = spec$packageName, 
+		accountName = spec$accountName
+	)
+	#URL = file.path(spec$githubRoot, spec$packageName)
 	BugReports <- file.path(URL, "issues")
 	
 	# Paste and return the info:
@@ -375,18 +465,29 @@ getREADME <- function(spec){
 			install <- NULL
 		}
 		
-		# Add install of the package:
-		install <- c(
-			install, 
-			paste0("# Install ", spec$packageName, " from GitHub using the devtools package:"), 
-			getGitHub_InstallPath(packageName=spec$packageName, version=spec$version, githubRoot=spec$githubRoot), 
-			""
-		)
+		## Add install of the package:
+		#install <- c(
+		#	install, 
+		#	paste0("# Install ", spec$packageName, " from GitHub using the devtools package:"), 
+		#	getGitHub_InstallPath(
+		#		packageName = spec$packageName, 
+		#		accountName = spec$accountName, 
+		#		version = spec$version
+		#	), 
+		#	""
+		#)
 		
 		# Add the alternative install:
-		install <- c(
-			"# Install the latest developer version", 
-			getGitHub_InstallPath(packageName=spec$packageName, version=NULL, githubRoot=spec$githubRoot)
+	    install <- c(
+			"# Install the latest GitHub release", 
+			getGitHub_InstallPath(
+				packageName = spec$packageName, 
+				accountName = spec$accountName, 
+				version = getRstoxPackageVersionString(
+				    packageName = spec$packageName, 
+				    version = spec$version
+				)
+			)
 		)
 	}
 	
@@ -394,7 +495,14 @@ getREADME <- function(spec){
 		paste0("# Release notes for ", spec$packageName, "_", spec$version, ":"), 
 		spec$NEWS, 
 		"", 
-		paste0("# For historical release notes see ", getGitHub_NewsLink(packageName=spec$packageName, version=spec$version, githubRoot=spec$githubRoot))
+		paste0(
+			"# For historical release notes see ", 
+			getGitHub_NewsLink(
+				packageName = spec$packageName, 
+				accountName = spec$accountName, 
+				version = spec$version
+			)
+		)
 	)
 	
 	# Combine into a list and add space between each paragraph:
@@ -451,27 +559,52 @@ addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
 	# Add imports from the NAMESPACE file (via 'spec'):
 	if(length(spec$imports)){
 		use_package_with_min_version(
-		    spec$imports, 
-		    type = "imports"
-	    )
+			spec$imports, 
+			type = "imports"
+		)
 		#cat("Imports:\n		", file=DESCRIPTIONFile, append = TRUE)
 		#cat(paste(spec$imports, collapse=",\n		"), file=DESCRIPTIONFile, append = TRUE)
 		#cat("", file=DESCRIPTIONFile, append = TRUE)
 	}
 	# Add also the suggests:
 	if(length(spec$suggests)){
-	    use_package_with_min_version(
-	        spec$suggests, 
-	        type = "suggests"
-	    )
-    }
+		use_package_with_min_version(
+			spec$suggests, 
+			type = "suggests"
+		)
+	}
 	# Add also the linkingto:
 	if(length(spec$linkingto)){
-	    use_package_with_min_version(
-	        spec$linkingto, 
-	        type = "linkingto"
-	    )
-	    #lapply(spec$linkingto, usethis::use_package, type="LinkingTo")
+		use_package_with_min_version(
+			spec$linkingto, 
+			type = "linkingto"
+		)
+		#lapply(spec$linkingto, usethis::use_package, type="LinkingTo")
+	}
+	# Add the remotes directly:
+	if(length(spec$remotes)){
+		# Read the DESCRIPTION file:
+		DESCRIPTION <- readLines(DESCRIPTIONFile)
+		# Add remotes:
+		DESCRIPTION <- c(
+			DESCRIPTION, 
+			"Remotes: ", 
+			paste(
+				paste0(
+					"\t", 
+					spec$accountName, 
+					"/", 
+					spec$remotes, 
+					"@", 
+					getRstoxPackageVersionString(
+						packageName = spec$remotes, 
+						version = unlist(spec$imports[spec$remotes])
+				   )
+		        ), 
+			    collapse = ", \n"
+			)
+		)
+		writeLines(DESCRIPTION, DESCRIPTIONFile)
 	}
 	
 	return(DESCRIPTIONFile)
@@ -519,7 +652,7 @@ details_Rstox <- function(version = "1.0"){
 	out <- c(
 		".onLoad <- function(libname, pkgname){", 
 		"\tif(Sys.getenv(\"JAVA_HOME\")!=\"\") Sys.setenv(JAVA_HOME=\"\")", 
-		"\t# Initiate the Rstox envitonment:", 
+		"\t# Initiate the Rstox environment:", 
 		"\tDefinitions <- initiateRstoxEnv()", 
 		"\t# Set the Java memory:", 
 		"\tsetJavaMemory(Definitions$JavaMem)", 
@@ -528,7 +661,7 @@ details_Rstox <- function(version = "1.0"){
 	out <- paste(out, collapse="\n")
 	#function(libname, pkgname){
 	#	if(Sys.getenv("JAVA_HOME")!="") Sys.setenv(JAVA_HOME="")
-	#	# Initiate the Rstox envitonment:
+	#	# Initiate the Rstox environment:
 	#	Definitions <- initiateRstoxEnv()
 	#	# Set the Java memory:
 	#	setJavaMemory(Definitions$JavaMem)
@@ -627,26 +760,26 @@ details_RstoxFramework <- function(version = "1.0"){
 
 authors_RstoxFramework <- function(version = "1.0"){
 	list(
-		list(given="Arne Johannes", family="Holmin",    role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Ibrahim",       family="Umar",      role=c("aut")),
-		list(given="Edvin",         family="Fuglebakk", role=c("aut")),
-		list(given="Aasmund",       family="Skaalevik", role=c("aut")),
-		list(given="Sindre",        family="Vatnehol",  role=c("aut")),
-		list(given="Esmael Musema", family="Hassen",    role=c("aut")),
-		list(given="Espen",         family="Johnsen",   role=c("aut")),
-		list(given="Atle",          family="Totland",   role=c("aut")),
+		list(given="Arne Johannes", family="Holmin",	role=c("cre", "aut"), email="arnejh@hi.no"), 
+		list(given="Ibrahim",	   family="Umar",	  role=c("aut")),
+		list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
+		list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
+		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
+		list(given="Esmael Musema", family="Hassen",	role=c("aut")),
+		list(given="Espen",		 family="Johnsen",   role=c("aut")),
+		list(given="Atle",		  family="Totland",   role=c("aut")),
 		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut"))
 	)
 }
 
 .onLoad_RstoxFramework <- function(version = "1.0"){
-    out <- c(
-        ".onLoad <- function(libname, pkgname){", 
-        "\t# Initiate the RstoxFramework envitonment:", 
-        "\tinitiateRstoxFramework()", 
-        "} "
-    )
-    paste(out, collapse="\n")
+	out <- c(
+		".onLoad <- function(libname, pkgname){", 
+		"\t# Initiate the RstoxFramework environment:", 
+		"\tinitiateRstoxFramework()", 
+		"} "
+	)
+	paste(out, collapse="\n")
 }
 ##########
 
@@ -665,11 +798,11 @@ details_RstoxData <- function(version = "1.0"){
 
 authors_RstoxData <- function(version = "1.0"){
 	list(
-		list(given="Ibrahim",       family="Umar",      role=c("cre", "aut"), email="ibrahim.umar@hi.no"), 
+		list(given="Ibrahim",	   family="Umar",	  role=c("cre", "aut"), email="ibrahim.umar@hi.no"), 
 		#list(given="Mikko Juhani",  family="Vihtakari", role=c("aut")),
-		list(given="Sindre",        family="Vatnehol",  role=c("aut")),
-		list(given="Arne Johannes", family="Holmin",    role=c("aut")),
-		list(given="Edvin",         family="Fuglebakk", role=c("aut"))
+		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
+		list(given="Arne Johannes", family="Holmin",	role=c("aut")),
+		list(given="Edvin",		 family="Fuglebakk", role=c("aut"))
 	)
 }
 ##########
@@ -689,8 +822,8 @@ details_RstoxFDA <- function(version = "1.0"){
 
 authors_RstoxFDA <- function(version = "1.0"){
 	list(
-		list(given="Arne Johannes", family="Holmin",    role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Edvin",         family="Fuglebakk", role=c("aut"))
+		list(given="Arne Johannes", family="Holmin",	role=c("cre", "aut"), email="arnejh@hi.no"), 
+		list(given="Edvin",		 family="Fuglebakk", role=c("aut"))
 	)
 }
 ##########
@@ -711,9 +844,9 @@ details_RstoxSurveyPlanner <- function(version = "1.0"){
 authors_RstoxSurveyPlanner <- function(version = "1.0"){
 	list(
 		list(given="Arne Johannes", family="Holmin",   role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Sindre",        family="Vatnehol", role=c("cre", "aut"), email="sindre.vatnehol@hi.no"), 
-		list(given="Alf",           family="Harbitz",  role=c("aut")), 
-		list(given="Espen",         family="Johnsen",  role=c("aut"))
+		list(given="Sindre",		family="Vatnehol", role=c("cre", "aut"), email="sindre.vatnehol@hi.no"), 
+		list(given="Alf",		   family="Harbitz",  role=c("aut")), 
+		list(given="Espen",		 family="Johnsen",  role=c("aut"))
 	)
 }
 ##########
@@ -734,58 +867,88 @@ details_RstoxTempdoc <- function(version = "1.0"){
 authors_RstoxTempdoc <- function(version = "1.0"){
 	list(
 		list(given="Arne Johannes", family="Holmin",  role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Atle",          family="Totland", role=c("aut"))
+		list(given="Atle",		  family="Totland", role=c("aut"))
 	)
 }
 ##########
 
 ##### RstoxBuild: #####
 title_RstoxBuild <- function(version = "1.0"){
-    "Package for building all Rstox packages"
+	"Package for building all Rstox packages"
 }
 
 description_RstoxBuild <- function(version = "1.0"){
-    "This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
+	"This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
 }
 
 details_RstoxBuild <- function(version = "1.0"){
-    "The package defines titles, descriptions, dependencies, authors, install instructions and other info for all the packages. All changes to authors, descriptions, suggests and other outputs of the function \\code{packageSpecs} should be changed in this package, and not in the individual packages. The package also contains functionality for semi-automated testing of Rstox on a set of test projects."
+	"The package defines titles, descriptions, dependencies, authors, install instructions and other info for all the packages. All changes to authors, descriptions, suggests and other outputs of the function \\code{packageSpecs} should be changed in this package, and not in the individual packages. The package also contains functionality for semi-automated testing of Rstox on a set of test projects."
 }
 
 authors_RstoxBuild <- function(version = "1.0"){
-    list(
-        list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
-    )
+	list(
+		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
+	)
 }
 ##########
 
 ##### RstoxBase: #####
 title_RstoxBase <- function(version = "1.0"){
-    "Base StoX functions"
+	"Base StoX functions"
 }
 
 description_RstoxBase <- function(version = "1.0"){
-    "This package contains the base StoX functions used for survey estimation"
+	"This package contains the base StoX functions used for survey estimation"
 }
 
 details_RstoxBase <- function(version = "1.0"){
-    "The StoX functions defined in RstoxBase are those for defining resolution (e.g., PSUs and Layers), assignment, NASC data and StationLengthDistribution data, density, abundance and superindividual abundance"
+	"The StoX functions defined in RstoxBase are those for defining resolution (e.g., PSUs and Layers), assignment, NASC data and StationLengthDistribution data, density, abundance and superindividual abundance"
 }
 
 authors_RstoxBase <- function(version = "1.0"){
-    list(
-        list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
-    )
+	list(
+		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
+	)
 }
 
 .onLoad_RstoxBase <- function(version = "1.0"){
-    out <- c(
-        ".onLoad <- function(libname, pkgname){", 
-        "\t# Initiate the RstoxBase envitonment:", 
-        "\tinitiateRstoxBase()", 
-        "} "
-    )
-    paste(out, collapse="\n")
+	out <- c(
+		".onLoad <- function(libname, pkgname){", 
+		"\t# Initiate the RstoxBase environment:", 
+		"\tinitiateRstoxBase()", 
+		"} "
+	)
+	paste(out, collapse="\n")
+}
+##########
+
+##### Rstox: #####
+title_RstoxAPI <- function(version = "1.0"){
+	"The API to StoX"
+}
+
+description_RstoxAPI <- function(version = "1.0"){
+	"This package is the interface between RstoxFramework and the StoX GUI. It ensures that "
+}
+
+details_RstoxAPI <- function(version = "1.0"){
+	"The package contains the function runModel() for running a model of a StoX project, runFunction() for accessing a function in RstoxFramework (or another package), and specifies the particular versions of the RstoxFramework and the packages specified as official packages by RstoxFramework."
+}
+
+authors_RstoxAPI <- function(version = "1.0"){
+	list(
+		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
+	)
+}
+
+.onLoad_RstoxAPI <- function(version = "1.0"){
+	out <- c(
+		".onLoad <- function(libname, pkgname){", 
+		"\t# Initiate the RstoxAPI environment:", 
+		"\tinitiateRstoxAPI()", 
+		"} "
+	)
+	paste(out, collapse="\n")
 }
 ##########
 
@@ -829,27 +992,43 @@ getPackageItem <- function(name, spec, packageName=NULL, version=NULL){
 	return(object)
 }
 # Funciton to get the install path to GitHub:
-getGitHub_InstallPath <- function(packageName = "Rstox", version = NULL, githubRoot = "https://github.com/StoXProject", ref = NULL){
+getGitHub_InstallPath <- function(packageName = "Rstox", accountName = "StoXProject" , version = NULL, ref = NULL){
 	# Get the relative GitHub path for the specific release:
-	path <- file.path(basename(githubRoot), packageName)
+	path <- getGithubURL(
+		packageName = packageName, 
+		accountName = accountName
+	)
+
+	#path <- file.path(basename(githubRoot), packageName)
 	# Add the release version:
-	if(length(version)){
-		path <- paste0(path, "@v", version)
-	}
-	path <- deparse(path)
+	#if(length(version)){
+	#	path <- paste0(path, "@v", version)
+	#}
+	#path <- deparse(path)
 	
-	# Add the ref, which could be the deleop branch:
-	if(length(ref)){
-		path <- paste0(path, ", ref = ", deparse(ref))
-	}
+	ref <- version
+	
+	## Add the ref, which could be the deleop branch:
+	#if(length(ref)){
+	#	path <- paste0(path, ", ref = ", deparse(ref))
+	#}
 	
 	# Construct and return the install string:
-	string <- paste0("devtools::install_github(", path, ")")
+	string <- paste0("devtools::install_github(", "\"", path, "\"", ", ref = ", deparse(ref), ")")
 	return(string)
 }
 # Function to get the link to the (online) NEWS file on GitHub depending on the :
-getGitHub_NewsLink <- function(packageName = "Rstox", version = "1.0", githubRoot = "https://github.com/StoXProject"){
-	file.path(githubRoot, packageName, "blob", if(isMaster(version)) "master" else "alpha", "NEWS")
+getGitHub_NewsLink <- function(packageName = "Rstox", accountName = "StoXProject", version = "1.0"){
+	file.path(
+		getGithubURL(
+			packageName = packageName, 
+			accountName = accountName
+		), 
+		"blob", 
+		#if(isMaster(version)) "master" else "alpha", 
+		"master", 
+		"NEWS"
+	)
 }
 # Function to get the relevant release notes:
 getNews_old <- function(NEWSfile, version = "1.0"){
@@ -977,183 +1156,188 @@ getDefault <- function(name){
 
 # Write single function PDF:
 writeFunctionPDFFromInstalledPackage <- function(functionName, packageName, pdfDir) {
-    # We need to load the package to get the Rd database:
-    library(packageName, character.only = TRUE)
-    # Get the Rd database:
-    db <- tools::Rd_db(packageName)
-    # Define a temporary file to write the Rd to
-    tmp <- tempfile()
-    # Paste the Rd to one string and write to the temporary file:
-    thisRd <- as.character(db[[paste0(functionName, ".Rd")]])
-    
-    if(length(thisRd)) {
-        thisRd <- paste(thisRd, collapse = "")
-        write(thisRd, tmp)
-        # Define the output PDF file:
-        pdfFile <- path.expand(file.path(pdfDir , paste0(functionName, ".pdf")))
-        # Build the PDF
-        msg <- callr::rcmd(
-            "Rd2pdf", 
-            cmdargs = c(
-                "--force", 
-                "--no-index", 
-                paste0("--title=", packageName, "::", functionName), 
-                paste0("--output=", pdfFile), 
-                tmp
-            )
-        )
-        # Return the path to the PDF file:
-        pdfFile
-    }
-    else {
-        warning("Function ", functionName, " not exported from package ", packageName)
-        return(NULL)
-    }
+	# We need to load the package to get the Rd database:
+	library(packageName, character.only = TRUE)
+	# Get the Rd database:
+	db <- tools::Rd_db(packageName)
+	# Define a temporary file to write the Rd to
+	tmp <- tempfile()
+	# Paste the Rd to one string and write to the temporary file:
+	thisRd <- as.character(db[[paste0(functionName, ".Rd")]])
+	
+	if(length(thisRd)) {
+		thisRd <- paste(thisRd, collapse = "")
+		write(thisRd, tmp)
+		# Define the output PDF file:
+		pdfFile <- path.expand(file.path(pdfDir , paste0(functionName, ".pdf")))
+		# Build the PDF
+		msg <- callr::rcmd(
+			"Rd2pdf", 
+			cmdargs = c(
+				"--force", 
+				"--no-index", 
+				paste0("--title=", packageName, "::", functionName), 
+				paste0("--output=", pdfFile), 
+				tmp
+			)
+		)
+		# Return the path to the PDF file:
+		pdfFile
+	}
+	else {
+		warning("Function ", functionName, " not exported from package ", packageName)
+		return(NULL)
+	}
 }
 
 getFunctionArgumentDescriptionsFromInstalledPackage <- function(functionName, packageName) {
-    
-    # The package needs to be loaded to get the documentation database:
-    library(packageName, character.only = TRUE)
-    # Get the Rd database:
-    db <- tools::Rd_db(packageName)
-    # Define a temporary file to write the Rd to
-    tmp <- tempfile()
-    # Paste the Rd to one string and write to the temporary file:
-    thisRd <- as.character(db[[paste0(functionName, ".Rd")]])
-    thisRd <- paste(thisRd, collapse = "")
-    write(thisRd, tmp)
-    # Read the file back in:
-    p <- tools::parse_Rd(tmp)
-    
-    # Detect the arguments, and get the valid arguments as those which are not line breaks:
-    atArguments <- sapply(p, attr, "Rd_tag") == "\\arguments"
-    argumentNames <- unlist(lapply(p[atArguments][[1]], head, 1))
-    validArgumentNames <- argumentNames != "\n"
-    
-    # Get and return the argument names and the descriptions:
-    argumentNames <- subset(argumentNames, validArgumentNames)
-    descriptions <- lapply(p[atArguments][[1]][validArgumentNames], function(x) paste0(unlist(x)[-1], collapse = " "))
-    names(descriptions) <- argumentNames
-    #list(
-    #    argumentName = argumentNames, 
-    #    description = descriptions
-    #)
-    descriptions
+	
+	# The package needs to be loaded to get the documentation database:
+	library(packageName, character.only = TRUE)
+	# Get the Rd database:
+	db <- tools::Rd_db(packageName)
+	# Define a temporary file to write the Rd to
+	tmp <- tempfile()
+	# Paste the Rd to one string and write to the temporary file:
+	thisRd <- as.character(db[[paste0(functionName, ".Rd")]])
+	thisRd <- paste(thisRd, collapse = "")
+	write(thisRd, tmp)
+	# Read the file back in:
+	p <- tools::parse_Rd(tmp)
+	
+	# Detect the arguments, and get the valid arguments as those which are not line breaks:
+	atArguments <- sapply(p, attr, "Rd_tag") == "\\arguments"
+	argumentNames <- unlist(lapply(p[atArguments][[1]], head, 1))
+	validArgumentNames <- argumentNames != "\n"
+	
+	# Get and return the argument names and the descriptions:
+	argumentNames <- subset(argumentNames, validArgumentNames)
+	descriptions <- lapply(p[atArguments][[1]][validArgumentNames], function(x) paste0(unlist(x)[-1], collapse = " "))
+	names(descriptions) <- argumentNames
+	#list(
+	#	argumentName = argumentNames, 
+	#	description = descriptions
+	#)
+	descriptions
 }
 
 # Write single function PDF:
 writeFunctionPDFs <- function(sourceDir, pdfDir = NULL) {
-    
-    # Function to convert one documentation file to pdf:
-    writeFunctionPDf_one <- function(manFile, pdfDir) {
-        # Get the funciton name:
-        functionName <- tools::file_path_sans_ext(basename(manFile))
-        
-        # Define the output PDF file:
-        pdfFile <- path.expand(file.path(pdfDir , paste0(functionName, ".pdf")))
-        
-        # Build the PDF
-        msg <- callr::rcmd(
-            "Rd2pdf", 
-            cmdargs = c(
-                "--force", 
-                "--no-index", 
-                paste0("--title=", functionName), 
-                paste0("--output=", pdfFile), 
-                manFile
-            )
-        )
-        # Return the path to the PDF file:
-        pdfFile
-    }
-    
-    # Get the directories of the documentation files and the 
-    manDir <- file.path(sourceDir, "man")
-    if(length(pdfDir) == 0) {
-        pdfDir <- file.path(sourceDir, "inst", "extdata", "functionPDFs")
-    }
-    if(file.exists(pdfDir)) {
-        unlink(pdfDir, force = TRUE, recursive = TRUE)
-    }
-    dir.create(pdfDir, showWarnings = FALSE, recursive = TRUE)
-    
-    
-    # List all the documentation files:
-    manFiles <- list.files(manDir, full.names = TRUE)
-    # Convert all documentation files:
-    sapply(manFiles, writeFunctionPDf_one, pdfDir = pdfDir)
+	
+	# Function to convert one documentation file to pdf:
+	writeFunctionPDf_one <- function(manFile, pdfDir) {
+		# Get the funciton name:
+		functionName <- tools::file_path_sans_ext(basename(manFile))
+		
+		# Define the output PDF file:
+		pdfFile <- path.expand(file.path(pdfDir , paste0(functionName, ".pdf")))
+		
+		# Build the PDF
+		msg <- callr::rcmd(
+			"Rd2pdf", 
+			cmdargs = c(
+				"--force", 
+				"--no-index", 
+				paste0("--title=", functionName), 
+				paste0("--output=", pdfFile), 
+				manFile
+			)
+		)
+		# Return the path to the PDF file:
+		pdfFile
+	}
+	
+	# Get the directories of the documentation files and the 
+	manDir <- file.path(sourceDir, "man")
+	if(length(pdfDir) == 0) {
+		pdfDir <- file.path(sourceDir, "inst", "extdata", "functionPDFs")
+	}
+	if(file.exists(pdfDir)) {
+		unlink(pdfDir, force = TRUE, recursive = TRUE)
+	}
+	dir.create(pdfDir, showWarnings = FALSE, recursive = TRUE)
+	
+	
+	# List all the documentation files:
+	manFiles <- list.files(manDir, full.names = TRUE)
+	# Convert all documentation files:
+	sapply(manFiles, writeFunctionPDf_one, pdfDir = pdfDir)
 }
 
 # Get and write the function argument descriptions of all documentation files:
 getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
-    
-    # Get the function argument descriptions of one documentation file:
-    getFunctionArgumentDescriptions_one <- function(manFile) {
-        # Parse the documentation file:
-        doc <- tools::parse_Rd(manFile)
-        
-        # Detect the arguments, and get the valid arguments as those which are not line breaks:
-        atArguments <- sapply(doc, attr, "Rd_tag") == "\\arguments"
-        if(any(atArguments)) {
-            argumentNames <- unlist(lapply(doc[atArguments][[1]], head, 1))
-            validArgumentNames <- argumentNames != "\n"
-            
-            # Get and return the argument names and the descriptions:
-            argumentNames <- subset(argumentNames, validArgumentNames)
-            descriptions <- lapply(doc[atArguments][[1]][validArgumentNames], function(x) paste0(unlist(x)[-1], collapse = " "))
-            names(descriptions) <- argumentNames
-            
-            descriptions
-        }
-        else {
-            descriptions <- NULL
-        }
-        descriptions
-    }
-    
-    
-    # Get the directories of the documentation files and the 
-    manDir <- file.path(sourceDir, "man")
-    if(length(docDir) == 0) {
-        docDir <- file.path(sourceDir, "inst", "extdata")
-    }
-    #docFile <- 
-    #if(file.exists(docDir)) {
-    #    unlink(docDir, force = TRUE, recursive = TRUE)
-    #}
-    dir.create(docDir, recursive = TRUE, showWarnings = FALSE)
-    
-    
-    # List all the documentation files:
-    manFiles <- list.files(manDir, full.names = TRUE)
-    
-    # Convert all documentation files:
-    functionDocumentation <- lapply(manFiles, getFunctionArgumentDescriptions_one)
-    
-    # Get the funciton name:
-    functionNames <- basename(sapply(manFiles, tools::file_path_sans_ext))
-    names(functionDocumentation) <- functionNames
-    
-    
-    functionDocumentationFile <- file.path(docDir, "functionArguments.rds")
-    saveRDS(functionDocumentation, functionDocumentationFile)
+	
+	# Get the function argument descriptions of one documentation file:
+	getFunctionArgumentDescriptions_one <- function(manFile) {
+		# Parse the documentation file:
+		doc <- tools::parse_Rd(manFile)
+		
+		# Detect the arguments, and get the valid arguments as those which are not line breaks:
+		atArguments <- sapply(doc, attr, "Rd_tag") == "\\arguments"
+		if(any(atArguments)) {
+			argumentNames <- unlist(lapply(doc[atArguments][[1]], head, 1))
+			validArgumentNames <- argumentNames != "\n"
+			
+			# Get and return the argument names and the descriptions:
+			argumentNames <- subset(argumentNames, validArgumentNames)
+			descriptions <- lapply(doc[atArguments][[1]][validArgumentNames], function(x) paste0(unlist(x)[-1], collapse = " "))
+			names(descriptions) <- argumentNames
+			
+			descriptions
+		}
+		else {
+			descriptions <- NULL
+		}
+		descriptions
+	}
+	
+	
+	# Get the directories of the documentation files and the 
+	manDir <- file.path(sourceDir, "man")
+	if(length(docDir) == 0) {
+		docDir <- file.path(sourceDir, "inst", "extdata")
+	}
+	#docFile <- 
+	#if(file.exists(docDir)) {
+	#	unlink(docDir, force = TRUE, recursive = TRUE)
+	#}
+	dir.create(docDir, recursive = TRUE, showWarnings = FALSE)
+	
+	
+	# List all the documentation files:
+	manFiles <- list.files(manDir, full.names = TRUE)
+	
+	# Convert all documentation files:
+	functionDocumentation <- lapply(manFiles, getFunctionArgumentDescriptions_one)
+	
+	# Get the funciton name:
+	functionNames <- basename(sapply(manFiles, tools::file_path_sans_ext))
+	names(functionDocumentation) <- functionNames
+	
+	
+	functionDocumentationFile <- file.path(docDir, "functionArguments.rds")
+	saveRDS(functionDocumentation, functionDocumentationFile)
 }
 
 # Function to add a package to the DESCRIPTION file, optionally with minimum version:
 use_package_with_min_version <- function(packageList, type = "imports"){
-    
-    # Assure that packageList is a named list:
-    if(!is.list(packageList)) {
-        packageList <- structure(vector("list", length(packageList)), names = packageList)
-        }
-    
-    # Add each package with version if present:
-    mapply(
-        usethis::use_package, 
-        package = names(packageList), 
-        type = type, 
-        min_version = packageList
-    )
+	
+	# Assure that packageList is a named list:
+	if(!is.list(packageList)) {
+		packageList <- structure(vector("list", length(packageList)), names = packageList)
+		}
+	
+	# Add each package with version if present:
+	mapply(
+		usethis::use_package, 
+		package = names(packageList), 
+		type = type, 
+		min_version = packageList
+	)
+}
+
+# Function to build a Rstox package version string:
+getRstoxPackageVersionString <- function(packageName, version) {
+	paste0(packageName, "-v", version)
 }
 ##########
