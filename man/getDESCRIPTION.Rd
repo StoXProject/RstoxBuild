@@ -3,7 +3,6 @@
 \name{getDESCRIPTION}
 \alias{getDESCRIPTION}
 \alias{getREADME}
-\alias{getImports}
 \alias{addImportsToDESCRIPTION}
 \alias{getPkgname}
 \title{Utility functions for getting and adding imports, DESCRIPTION, README and kgname to the package.}
@@ -11,8 +10,6 @@
 getDESCRIPTION(spec)
 
 getREADME(spec)
-
-getImports(spec)
 
 addImportsToDESCRIPTION(spec, cpp = FALSE)
 
@@ -24,7 +21,6 @@ getPkgname(spec)
 \description{
 \code{getDESCRIPTION} gets the DESCRIPTION text to write to the DESCRIPTION file, adding authors, R-dependency, title, description and other info stored in the input \code{spec}. Note that the package imports are not added here, but later in the \code{addImportsToDESCRIPTION} function.\cr \cr
 \code{getREADME} gets the README file in the Rstox style, which has package and R version in the first two lines, followed by description, install instructions, miscellaneous info, and release notes retrieved from the NEWS file.\cr \cr
-\code{getImports} gets the package dependencies (imports) from the NAMESPACE file. This function must be run (immediately) after devtools::document(dir) in \code{\link{buildRstoxPackage}}.\cr \cr
 \code{addImportsToDESCRIPTION} adds the imports to the DESCRIPTION file.\cr \cr
 \code{getPkgname} gets the pkgname text to write to the pkgname.R file.
 }

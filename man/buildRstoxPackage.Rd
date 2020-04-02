@@ -26,7 +26,8 @@ buildRstoxPackage(
   check = FALSE,
   noRcpp = FALSE,
   addManual = FALSE,
-  addIndividualManuals = FALSE
+  addIndividualManuals = FALSE,
+  type = c("patch", "minor", "major")
 )
 
 packageSpecs(
@@ -46,7 +47,8 @@ packageSpecs(
   authors = NULL,
   .onLoad = NULL,
   .onAttach = NULL,
-  misc = NULL
+  misc = NULL,
+  type = c("patch", "minor", "major")
 )
 }
 \arguments{

@@ -1,4 +1,4 @@
-# RstoxBuild version: 0.0.1 (latest alpha, 2020-04-01)
+# RstoxBuild version: 1.0.1 (latest alpha, 2020-04-02)
 # R version: 3.6
 
 
@@ -6,12 +6,12 @@
 
 
 # Install the latest GitHub release
-devtools::install_github("https://github.com/StoXProject/RstoxBuild", ref = "RstoxBuild-v0.0.1")
+devtools::install_github("https://github.com/StoXProject/RstoxBuild", ref = "RstoxBuild-v1.0.1")
 
 
-# Release notes for RstoxBuild_0.0.1:
+# Release notes for RstoxBuild_1.0.1:
 # . 
 
-# For historical release notes see https://github.com/StoXProject/RstoxBuild/blob/alpha/NEWS
+# For historical release notes see https://github.com/StoXProject/RstoxBuild/blob/master/NEWS
 
 

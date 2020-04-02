@@ -27,60 +27,60 @@ getGithubAPI <- function(packageName, accountName = "StoXProject") {
 	paste(githupPaths("api"), accountName, packageName, "releases", sep = "/")
 }
 
-# Function to get a list of release names of a package:
-getReleaseNames <- function(packageName, accountName = "StoXProject") {
-	# Build the URL to list the releases:
-	URL <- getGithubAPI(packageName = packageName, accountName = accountName)
-	# Download the list of releases to a temporary file:
-	tmp <- tempfile()
-	utils::download.file(URL, tmp)
-	json <- jsonlite::read_json(tmp)
-	releases <- sapply(json, "[[", "tag_name")
-	
-	return(releases)
-}
+### # Function to get a list of release names of a package:
+### getReleaseNames <- function(packageName, accountName = "StoXProject") {
+### 	# Build the URL to list the releases:
+### 	URL <- getGithubAPI(packageName = packageName, accountName = accountName)
+### 	# Download the list of releases to a temporary file:
+### 	tmp <- tempfile()
+### 	utils::download.file(URL, tmp)
+### 	json <- jsonlite::read_json(tmp)
+### 	releases <- sapply(json, "[[", "tag_name")
+### 	
+### 	return(releases)
+### }
+### 
+### # Get latest release version
+### getLatestReleaseVersion <- function(packageName, accountName = "StoXProject", default = "0.0.1") {
+### 	releaseNames <- getReleaseNames(
+### 		packageName = packageName, 
+### 		accountName = accountName
+### 	)
+### 	lastVersion <- sort(sub("^\\D+(\\d)", "\\1", releaseNames), decreasing = TRUE)[1]
+### 	if(is.na(lastVersion)) {
+### 		lastVersion <- default
+### 	}
+### 	return(lastVersion)
+### }
 
-# Get latest release version
-getLatestReleaseVersion <- function(packageName, accountName = "StoXProject", default = "0.0.1") {
-	releaseNames <- getReleaseNames(
-		packageName = packageName, 
-		accountName = accountName
-	)
-	lastVersion <- sort(sub("^\\D+(\\d)", "\\1", releaseNames), decreasing = TRUE)[1]
-	if(is.na(lastVersion)) {
-		lastVersion <- default
-	}
-	return(lastVersion)
-}
 
 
-
-# Function to get the current version from the file RstoxVersions.R in the Rstox_utils repository:
-getCurrentVersion <- function(packageName) {
-	
-	versionFile <- "https://raw.githubusercontent.com/Sea2Data/Rstox_utils/master/Build/RstoxVersions.R"
-	# Try sourcing the list of versions from GitHub:
-	temp <- tryCatch(
-		{
-			source(versionFile)
-			TRUE
-		}, 
-		error = function(err) {
-			FALSE
-		}
-	)
-	
-	if(!temp) {
-		warning("Internet connection failed, or for some other reason the file '", versionFile, "' could not be reached. Specify the version manually using 'version' in RstoxBuild::buildRstoxPackage().")
-	}	
-	
-	version <- RstoxVersions[[packageName]]
-	if(length(version) == 0) {
-		stop("The package ", packageName, " is not present in the file ", versionFile, ".")
-	}
-	
-	return(version)
-}
+### # Function to get the current version from the file RstoxVersions.R in the Rstox_utils repository:
+### getCurrentVersion <- function(packageName) {
+### 	
+### 	versionFile <- "https://raw.githubusercontent.com/Sea2Data/Rstox_utils/master/Build/RstoxVersions.R"
+### 	# Try sourcing the list of versions from GitHub:
+### 	temp <- tryCatch(
+### 		{
+### 			source(versionFile)
+### 			TRUE
+### 		}, 
+### 		error = function(err) {
+### 			FALSE
+### 		}
+### 	)
+### 	
+### 	if(!temp) {
+### 		warning("Internet connection failed, or for some other reason the file '", versionFile, "' could not be reached. Specify the ### version manually using 'version' in RstoxBuild::buildRstoxPackage().")
+### 	}	
+### 	
+### 	version <- RstoxVersions[[packageName]]
+### 	if(length(version) == 0) {
+### 		stop("The package ", packageName, " is not present in the file ", versionFile, ".")
+### 	}
+### 	
+### 	return(version)
+### }
 
 
 
@@ -118,7 +118,8 @@ buildRstoxPackage <- function(
 	check = FALSE, 
 	noRcpp = FALSE, 
 	addManual = FALSE, 
-	addIndividualManuals = FALSE
+	addIndividualManuals = FALSE, 
+	type = c("patch", "minor", "major")
 ){
 	
 	# Get the specifications of the package:
@@ -139,7 +140,8 @@ buildRstoxPackage <- function(
 		.onLoad = .onLoad, 
 		.onAttach = .onAttach, 
 		misc = misc, 
-		authors = authors
+		authors = authors, 
+		type = type
 	)
 	
 	# Set the path to the package for usethis:
@@ -238,14 +240,14 @@ buildRstoxPackage <- function(
 	##########
 	
 	##### Install the package: #####
-	utils::install.packages(spec$dir, repos=NULL, type="source", lib=.libPaths()[1])
+	utils::install.packages(spec$dir, repos = NULL, type = "source", lib = .libPaths()[1])
 	
 	# Build and open documentation pdf:
 	if(addManual) {
 		pkg <- file.path(.libPaths()[1], spec$packageName)
 		path <- file.path(pkg, "extdata", "manual")
 		dir.create(path, recursive = TRUE)
-		temp <- devtools::build_manual(pkg=pkg, path=path)
+		temp <- devtools::build_manual(pkg = pkg, path = path)
 		print(path)
 		
 		# Open the PDF:
@@ -280,7 +282,8 @@ packageSpecs <- function(
 	authors = NULL,
 	.onLoad = NULL,
 	.onAttach = NULL,
-	misc = NULL
+	misc = NULL, 
+	type = c("patch", "minor", "major")
 	){
 	
 	# If the packageName is a string with no slashes and does not exist as a directory, locate the directories of the developers defined in the 
@@ -300,7 +303,8 @@ packageSpecs <- function(
 	
 	# Get version:
 	if(identical(version, "current")) {
-		version <- getCurrentVersion(packageName)
+		#version <- getCurrentVersion(packageName)
+		version <- incrementHighestRelease(packageName, type = type, sting.out = TRUE, accountName = accountName)
 	}
 	
 	# Get NEWS file and NEWS;
@@ -310,6 +314,35 @@ packageSpecs <- function(
 	}
 	else{
 		NEWS <- getNews(NEWSfile, version = version)
+	}
+	
+	# Assure that imports, suggests and linkingto are named lists:
+	imports <- asNamedList(imports)
+	suggests <- asNamedList(suggests)
+	#linkingto <- asNamedList(linkingto)
+	
+	# Get remotes version:
+	remotesVersions <- NULL
+	remotesStrings <- NULL
+	if(length(remotes)) {
+	    remotesVersions <- lapply(remotes, getHighestRelease)
+	    names(remotesVersions) <- remotes
+	    
+	    # Add the remotes to the imports:
+	    imports <- c(
+	        imports, 
+	        remotesVersions
+	    )
+	    
+	    # Also get the remotes strings (for use in the Remotes field in DESCRIPTION):
+	    remotesStrings <- paste0(
+	        remotes, 
+	        "@", 
+	        getRstoxPackageVersionString(
+	            packageName = remotes, 
+	            version = unlist(remotesVersions)
+	        )
+	    )
 	}
 	
 	
@@ -324,6 +357,8 @@ packageSpecs <- function(
 		imports = imports, 
 		suggests = suggests, 
 		remotes = remotes, 
+		remotesVersions = remotesVersions, 
+		remotesStrings = remotesStrings, 
 		# Mandatory objects:
 		title = title, 
 		description = description, 
@@ -381,7 +416,6 @@ packageSpecs <- function(
 #'
 #' \code{getDESCRIPTION} gets the DESCRIPTION text to write to the DESCRIPTION file, adding authors, R-dependency, title, description and other info stored in the input \code{spec}. Note that the package imports are not added here, but later in the \code{addImportsToDESCRIPTION} function.\cr \cr
 #' \code{getREADME} gets the README file in the Rstox style, which has package and R version in the first two lines, followed by description, install instructions, miscellaneous info, and release notes retrieved from the NEWS file.\cr \cr
-#' \code{getImports} gets the package dependencies (imports) from the NAMESPACE file. This function must be run (immediately) after devtools::document(dir) in \code{\link{buildRstoxPackage}}.\cr \cr
 #' \code{addImportsToDESCRIPTION} adds the imports to the DESCRIPTION file.\cr \cr
 #' \code{getPkgname} gets the pkgname text to write to the pkgname.R file.
 #'
@@ -453,17 +487,17 @@ getREADME <- function(spec){
 	}
 	# Install from GitHub, either with or without first installing dependencies:
 	else{
-		# Define install of dependencies:
-		if(length(spec$imports)){
-			install <- c(
-				paste0("# Install the packages that ", spec$packageName, " depends on. Note that this updates all the specified packages to the latest (binary) version:"), 
-				paste0("dep.pck <- c(\"", paste0(spec$imports, collapse="\", \""), "\")"), 
-				""
-			)
-		}
-		else{
-			install <- NULL
-		}
+		## Define install of dependencies:
+		#if(length(spec$imports)){
+		#	install <- c(
+		#		paste0("# Install the packages that ", spec$packageName, " depends on. Note that this updates all the specified packages to the late#st (binary) version:"), 
+		#		paste0("dep.pck <- c(\"", paste0(spec$imports, collapse="\", \""), "\")"), 
+		#		""
+		#	)
+		#}
+		#else{
+		#	install <- NULL
+		#}
 		
 		## Add install of the package:
 		#install <- c(
@@ -523,48 +557,17 @@ getREADME <- function(spec){
 #' @export
 #' @rdname getDESCRIPTION
 #' 
-getImports <- function(spec){
-	
-	# Functions used for extracting the imports in Rstox, in order to inform about these in the README file. This will not be needed once the package is on CRAN:
-	discardBasePackages <- function(x){
-		inst <- utils::installed.packages()
-		Base <- inst[, "Package"][inst[,"Priority"] %in% c("base", "recommended")]
-		sort(setdiff(x, Base))
-	}
-	
-	NAMESPACEFile <- file.path(spec$dir, "NAMESPACE")
-	if(file.exists(NAMESPACEFile)){
-		NAMESPACE <- readLines(NAMESPACEFile, warn=FALSE)
-		atImports <- grep("import", NAMESPACE)
-		imports <- NAMESPACE[atImports]
-		if(length(atImports)){
-			imports <- sapply(strsplit(imports, "(", fixed = TRUE), "[", 2)
-			imports <- sapply(strsplit(imports, ")", fixed = TRUE), "[", 1)
-			imports <- unique(sapply(strsplit(imports, ",", fixed = TRUE), "[", 1))
-			imports <- discardBasePackages(imports)
-		}
-	}
-	
-	return(imports)
-}
-#' 
-#' @export
-#' @rdname getDESCRIPTION
-#' 
 addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
 	
 	# Get the README and NEWS file paths:
 	DESCRIPTIONFile <- file.path(spec$dir, "DESCRIPTION")
 	
-	# Add imports from the NAMESPACE file (via 'spec'):
+    # Add imports from 'spec':
 	if(length(spec$imports)){
 		use_package_with_min_version(
 			spec$imports, 
 			type = "imports"
 		)
-		#cat("Imports:\n		", file=DESCRIPTIONFile, append = TRUE)
-		#cat(paste(spec$imports, collapse=",\n		"), file=DESCRIPTIONFile, append = TRUE)
-		#cat("", file=DESCRIPTIONFile, append = TRUE)
 	}
 	# Add also the suggests:
 	if(length(spec$suggests)){
@@ -804,6 +807,16 @@ authors_RstoxData <- function(version = "1.0"){
 		list(given="Arne Johannes", family="Holmin",	role=c("aut")),
 		list(given="Edvin",		 family="Fuglebakk", role=c("aut"))
 	)
+}
+
+.onLoad_RstoxData <- function(version = "1.0"){
+    out <- c(
+        ".onLoad <- function(libname, pkgname){", 
+        "\t# Initiate the RstoxData environment:", 
+        "\tinitiateRstoxData()", 
+        "} "
+    )
+    paste(out, collapse="\n")
 }
 ##########
 
@@ -1321,13 +1334,8 @@ getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
 
 # Function to add a package to the DESCRIPTION file, optionally with minimum version:
 use_package_with_min_version <- function(packageList, type = "imports"){
-	
-	# Assure that packageList is a named list:
-	if(!is.list(packageList)) {
-		packageList <- structure(vector("list", length(packageList)), names = packageList)
-		}
-	
-	# Add each package with version if present:
+    
+    # Add each package with version if present:
 	mapply(
 		usethis::use_package, 
 		package = names(packageList), 
@@ -1340,4 +1348,115 @@ use_package_with_min_version <- function(packageList, type = "imports"){
 getRstoxPackageVersionString <- function(packageName, version) {
 	paste0(packageName, "-v", version)
 }
+
+
+
+
+
+getReleases <- function(packageName, accountName = "StoXProject", all.releases = FALSE) {
+    API <- githupPaths("api")
+    URL <- paste(API, accountName, packageName, "releases", sep = "/")
+    parsed <- jsonlite::fromJSON(URL, simplifyVector = FALSE)
+    releases <- sapply(parsed, "[[", "tag_name")
+    if(all.releases || length(releases) == 0) {
+        return(releases)
+    }
+    else {
+        # Get valid release names, which are those starting with the package name:
+        valid <- startsWith(releases, packageName)
+        validReleases <- releases[valid]
+        if(length(validReleases) == 0) {
+            stop("No valid releases")
+        }
+        # Get versions:
+        #versions <- sub("^[^-v]*", "", validReleases)
+        versions <- sub(".*-v", "", validReleases)
+        
+        # Get the three individual numbers, which are separated by dot:
+        versionsNumeric <- strsplit(versions, ".", fixed = TRUE)
+        
+        # Extract only three numbers, excluding any additional dots:
+        versionsNumeric <- lapply(versionsNumeric, utils::head, 3)
+        
+        # Trim any characters from punctuation and on:
+        versionsNumeric <- lapply(versionsNumeric, function(x) gsub("(.*)[[:punct:]].*", "\\1", x))
+        versionsNumeric <- lapply(versionsNumeric, as.numeric)
+        
+        # Append NAs for those which may have less than 3 numbers:
+        versionsNumeric <- lapply(versionsNumeric, function(x) append(x, rep(NA, 3 - length(x))))
+        
+        # Convert to data.table:
+        versionsNumeric <- lapply(versionsNumeric, as.list)
+        
+        # Rbind into data.table:
+        versionsNumeric <- data.table::rbindlist(versionsNumeric)
+        
+        names(versionsNumeric) <- c("major", "minor", "patch")
+        
+        return(versionsNumeric)
+    }
+}
+
+
+getHighestRelease <- function(packageName, sting.out = TRUE, accountName = "StoXProject") {
+    
+    # Get release version numbers:
+    versionsNumeric <- getReleases(packageName, accountName = accountName, all.releases = FALSE)
+    
+    # If there are no versions, return 0.0.1:
+    if(length(versionsNumeric) == 0) {
+        versionsNumeric <- list(0, 0, 1)
+        names(versionsNumeric) <- c("patch", "minor", "major")
+        if(sting.out) {
+            versionsString <- paste(unlist(versionsNumeric), collapse = ".")
+            return(versionsString)
+        }
+        else {
+            return(versionsNumeric)
+        }
+    }
+    
+    # Order the versions by first, second and then third number:
+    versionOrder <- order(versionsNumeric$major, versionsNumeric$minor, versionsNumeric$patch, decreasing = TRUE)
+    
+    if(versionOrder[[1]] != 1L) {
+        warning("The latest release is not the one with the highest version number")
+    }
+    
+    # Add 1 to the specified version number:
+    highestVersion <- versionsNumeric[versionOrder[[1]], ]
+    highestVersion <- as.list(highestVersion)
+    
+    if(sting.out) {
+        highestVersion <- paste(unlist(highestVersion), collapse = ".")
+    }
+    
+    return(highestVersion)
+}
+
+incrementHighestRelease <- function(packageName, type = c("patch", "minor", "major"), sting.out = TRUE, accountName = "StoXProject") {
+    
+    # Get the increment type:
+    type <- match.arg(type)
+    
+    # Get the highest release:
+    highestRelease <- getHighestRelease(packageName, sting.out = FALSE, accountName = accountName)
+    
+    nextVersion <- highestRelease
+    nextVersion[[type]] <- nextVersion[[type]] + 1
+    
+    if(sting.out) {
+        nextVersion <- paste(unlist(nextVersion), collapse = ".")
+    }
+    
+    return(nextVersion)
+}
+
+asNamedList <- function(x, values) {
+    if(!is.list(x)) {
+        x <- structure(vector("list", length(x)), names = x)
+    }
+    return(x)
+}
 ##########
+
