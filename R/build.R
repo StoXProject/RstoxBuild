@@ -105,6 +105,7 @@ buildRstoxPackage <- function(
 	imports = NULL, 
 	suggests = NULL, 
 	remotes = NULL, 
+	additional_repositories = NULL, 
 	onCran = FALSE, 
 	license = "LGPL-3", 
 	rootDir = NULL, 
@@ -112,6 +113,7 @@ buildRstoxPackage <- function(
 	description = NULL, 
 	details = NULL, 
 	.onLoad = NULL, 
+	.onUnload = NULL, 
 	.onAttach = NULL, 
 	misc = NULL, 
 	authors = NULL, 
@@ -131,6 +133,7 @@ buildRstoxPackage <- function(
 		imports = imports, 
 		suggests = suggests, 
 		remotes = remotes, 
+		additional_repositories = additional_repositories, 
 		onCran = onCran, 
 		license = license, 
 		rootDir = rootDir, 
@@ -138,6 +141,7 @@ buildRstoxPackage <- function(
 		description = description, 
 		details = details, 
 		.onLoad = .onLoad, 
+		.onUnload = .onUnload, 
 		.onAttach = .onAttach, 
 		misc = misc, 
 		authors = authors, 
@@ -163,23 +167,33 @@ buildRstoxPackage <- function(
 	# Clear the installed package:
 	try(lapply(.libPaths(), function(x) utils::remove.packages(spec$packageName, x)), silent = TRUE)
 	
+	##### Write the pkgname.R file: #####
+	pkgnameFile <- file.path(spec$dir, "R", "pkgname.R")
+	write(c(spec$pkgname, ""), pkgnameFile)
+	##########
+	
 	##### Write the onLoad.R file: #####
 	if(length(spec$.onLoad)){
-		onLoadFile <- file.path(spec$dir, "R", "onLoad.R")
-		write(spec$.onLoad, onLoadFile)
+	    #onLoadFile <- file.path(spec$dir, "R", "onLoad.R")
+	    #write(spec$.onLoad, onLoadFile)
+	    write(c(spec$.onLoad, ""), pkgnameFile, append = TRUE)
+	}
+	##########
+	
+	##### Write the onLoad.R file: #####
+	if(length(spec$.onUnload)){
+	    #onLoadFile <- file.path(spec$dir, "R", "onLoad.R")
+	    #write(spec$.onLoad, onLoadFile)
+	    write(c(spec$.onUnload, ""), pkgnameFile, append = TRUE)
 	}
 	##########
 	
 	##### Write the onAttach.R file: #####
 	if(length(spec$.onAttach)){
-		onAttachFile <- file.path(spec$dir, "R", "onAttach.R")
-		write(spec$.onAttach, onAttachFile)
+		#onAttachFile <- file.path(spec$dir, "R", "onAttach.R")
+		#write(spec$.onAttach, onAttachFile)
+		write(c(spec$.onAttach, ""), pkgnameFile, append = TRUE)
 	}
-	##########
-	
-	##### Write the pkgname.R file: #####
-	pkgnameFile <- file.path(spec$dir, "R", "pkgname.R")
-	write(spec$pkgname, pkgnameFile)
 	##########
 	
 	##### Write the DESCRIPTION file: #####
@@ -211,7 +225,7 @@ buildRstoxPackage <- function(
 		if(!noRcpp){
 			usethis::use_rcpp()
 			# Add the C++ specifics to the pkgnameFile:
-			write(spec$Rcpp, pkgnameFile, append = TRUE)
+			write(c(spec$Rcpp, ""), pkgnameFile, append = TRUE)
 		}
 		# Also delete shared objects for safety:
 		sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names = TRUE)
@@ -273,6 +287,7 @@ packageSpecs <- function(
 	imports = NULL, 
 	suggests = NULL, 
 	remotes = NULL, 
+	additional_repositories = NULL, 
 	onCran = FALSE, 
 	license = "LGPL-3", 
 	rootDir = NULL, 
@@ -281,6 +296,7 @@ packageSpecs <- function(
 	details = NULL,
 	authors = NULL,
 	.onLoad = NULL,
+	.onUnload = NULL,
 	.onAttach = NULL,
 	misc = NULL, 
 	type = c("patch", "minor", "major")
@@ -357,6 +373,7 @@ packageSpecs <- function(
 		imports = imports, 
 		suggests = suggests, 
 		remotes = remotes, 
+		additional_repositories = additional_repositories, 
 		remotesVersions = remotesVersions, 
 		remotesStrings = remotesStrings, 
 		# Mandatory objects:
@@ -366,6 +383,7 @@ packageSpecs <- function(
 		authors = authors, 
 		# Optional objects:
 		.onLoad = .onLoad, 
+		.onUnload = .onUnload, 
 		.onAttach = .onAttach, 
 		misc = misc, 
 		# Other specs:
@@ -376,7 +394,7 @@ packageSpecs <- function(
 	)
 	
 	mandatory <- c("title", "description", "details", "authors")
-	optional <- c(".onLoad", ".onAttach", "misc")
+	optional <- c(".onLoad", ".onUnload", ".onAttach", "misc")
 	mandatoryORoptional <- c(mandatory, optional)
 	
 	# Get the missing package documentation objects from memory:
@@ -609,6 +627,22 @@ addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
 		)
 		writeLines(DESCRIPTION, DESCRIPTIONFile)
 	}
+	# Add the remotes directly:
+	if(length(spec$additional_repositories)){
+	    # Read the DESCRIPTION file:
+	    DESCRIPTION <- readLines(DESCRIPTIONFile)
+	    # Add remotes:
+	    DESCRIPTION <- c(
+	        DESCRIPTION, 
+	        "Additional_repositories: ", 
+	        paste0("\t", spec$additional_repositories)
+	    )
+	    writeLines(DESCRIPTION, DESCRIPTIONFile)
+	}
+	
+	
+	
+	
 	
 	return(DESCRIPTIONFile)
 }
@@ -818,6 +852,16 @@ authors_RstoxData <- function(version = "1.0"){
     )
     paste(out, collapse="\n")
 }
+
+.onUnload_RstoxData <- function(version = "1.0"){
+    out <- c(
+        "# Try to unload dynamic library", 
+        ".onUnload <- function (libpath) {", 
+        "\tlibrary.dynam.unload(\"RstoxData\", libpath)", 
+        "} "
+    )
+    paste(out, collapse="\n")
+}
 ##########
 
 ##### RstoxFDA: #####
@@ -911,7 +955,7 @@ title_RstoxBase <- function(version = "1.0"){
 }
 
 description_RstoxBase <- function(version = "1.0"){
-	"This package contains the base StoX functions used for survey estimation"
+	"This package contains the base StoX functions used for survey estimation."
 }
 
 details_RstoxBase <- function(version = "1.0"){
@@ -941,7 +985,7 @@ title_RstoxAPI <- function(version = "1.0"){
 }
 
 description_RstoxAPI <- function(version = "1.0"){
-	"This package is the interface between RstoxFramework and the StoX GUI. It ensures that "
+	"This package is the interface between RstoxFramework and the StoX GUI. It ensures that the specified packages are installed for a StoX version."
 }
 
 details_RstoxAPI <- function(version = "1.0"){
@@ -1356,7 +1400,27 @@ getRstoxPackageVersionString <- function(packageName, version) {
 getReleases <- function(packageName, accountName = "StoXProject", all.releases = FALSE) {
     API <- githupPaths("api")
     URL <- paste(API, accountName, packageName, "releases", sep = "/")
-    parsed <- jsonlite::fromJSON(URL, simplifyVector = FALSE)
+    print(URL)
+    parsed <- tryCatch(
+        {
+            # Access the API using the GITHUB_PAT (personal access token)
+            pat <- Sys.getenv("GITHUB_PAT")
+            if(nchar(pat)) {
+                api_data <- httr::GET(URL, httr::authenticate(Sys.getenv("GITHUB_PAT"), "x-oauth-basic", "basic"))
+            }
+            else {
+                warning("Please create a personal access token with the following procedure: Use `usethis::browse_github_pat()` to go the the GitHub page where you need to log in and click the green 'Generate token' button at the bottom of the page. Then copy this to the clipboard and use `usethis::edit_r_environ()` to open the .Renivron file. Add the token as `GITHUB_PAT=12345678901234567890` (replace with the copied token) and end the file with a line space. Save and close the file, and restart R to make the change effective.")
+                api_data <- httr::GET(URL)
+            }
+            #httr::GET(URL, config = auth)
+            jsonlite::fromJSON(content(api_data, "text"), simplifyVector = FALSE)
+        }, 
+        error = function(err) NULL
+    )
+    if(length(parsed) == 0) {
+        return(data.table::data.table())
+    }
+    #parsed <- jsonlite::fromJSON(URL, simplifyVector = FALSE)
     releases <- sapply(parsed, "[[", "tag_name")
     if(all.releases || length(releases) == 0) {
         return(releases)
@@ -1402,7 +1466,6 @@ getHighestRelease <- function(packageName, sting.out = TRUE, accountName = "StoX
     
     # Get release version numbers:
     versionsNumeric <- getReleases(packageName, accountName = accountName, all.releases = FALSE)
-    
     # If there are no versions, return 0.0.1:
     if(length(versionsNumeric) == 0) {
         versionsNumeric <- list(0, 0, 1)
