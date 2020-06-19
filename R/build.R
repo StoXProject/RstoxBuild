@@ -9,8 +9,8 @@
 # 5b.	RstoxBuild
 
 
-# Unused functions
-githupPaths <- function(element = c("github", "api")) {
+# Get paths to GitHub:
+githubPaths <- function(element = c("github", "api")) {
 	element <- match.arg(element)
 	out <- list(
 		github = "https://github.com", 
@@ -20,11 +20,11 @@ githupPaths <- function(element = c("github", "api")) {
 }
 
 getGithubURL <- function(packageName, accountName = "StoXProject") {
-	paste(githupPaths("github"), accountName, packageName, sep = "/")
+	paste(githubPaths("github"), accountName, packageName, sep = "/")
 }
 
 getGithubAPI <- function(packageName, accountName = "StoXProject") {
-	paste(githupPaths("api"), accountName, packageName, "releases", sep = "/")
+	paste(githubPaths("api"), accountName, packageName, "releases", sep = "/")
 }
 
 ### # Function to get a list of release names of a package:
@@ -104,7 +104,9 @@ buildRstoxPackage <- function(
 	Rversion = "3.5", 
 	imports = NULL, 
 	suggests = NULL, 
+	linkingto = NULL, 
 	remotes = NULL, 
+	internal.dependencies = NULL, 
 	additional_repositories = NULL, 
 	onCran = FALSE, 
 	license = "LGPL-3", 
@@ -124,7 +126,7 @@ buildRstoxPackage <- function(
 	type = c("patch", "minor", "major")
 ){
 	
-	# Get the specifications of the package:
+    # Get the specifications of the package:
 	spec <- packageSpecs(
 		packageName = packageName, 
 		accountName = accountName, 
@@ -132,7 +134,9 @@ buildRstoxPackage <- function(
 		Rversion = Rversion, 
 		imports = imports, 
 		suggests = suggests, 
+		linkingto = linkingto, 
 		remotes = remotes, 
+		internal.dependencies = internal.dependencies, 
 		additional_repositories = additional_repositories, 
 		onCran = onCran, 
 		license = license, 
@@ -222,7 +226,7 @@ buildRstoxPackage <- function(
 	
 	# Add linkedTo: Rcpp in the DESCRIPTION:
 	if(spec$useCpp){
-		if(!noRcpp){
+	    if(!noRcpp){
 			usethis::use_rcpp()
 			# Add the C++ specifics to the pkgnameFile:
 			write(c(spec$Rcpp, ""), pkgnameFile, append = TRUE)
@@ -262,7 +266,6 @@ buildRstoxPackage <- function(
 		path <- file.path(pkg, "extdata", "manual")
 		dir.create(path, recursive = TRUE)
 		temp <- devtools::build_manual(pkg = pkg, path = path)
-		print(path)
 		
 		# Open the PDF:
 		pdfFile <- list.files(path, full.names = TRUE)[1]
@@ -286,7 +289,9 @@ packageSpecs <- function(
 	Rversion = "3.5", 
 	imports = NULL, 
 	suggests = NULL, 
+	linkingto = NULL, 
 	remotes = NULL, 
+	internal.dependencies = NULL, 
 	additional_repositories = NULL, 
 	onCran = FALSE, 
 	license = "LGPL-3", 
@@ -335,32 +340,50 @@ packageSpecs <- function(
 	# Assure that imports, suggests and linkingto are named lists:
 	imports <- asNamedList(imports)
 	suggests <- asNamedList(suggests)
-	#linkingto <- asNamedList(linkingto)
+	linkingto <- asNamedList(linkingto)
+	
+	if(length(remotes) && length(internal.dependencies)) {
+	    stop("remotes and internal.dependencies cannot be set at the same time. Use either remotes, which specifies to install from the GitHub account, or internal.dependencies, which uses the additional_repositories.")
+	}
 	
 	# Get remotes version:
-	remotesVersions <- NULL
-	remotesStrings <- NULL
+	remotes_versions <- NULL
+	remotes_strings <- NULL
 	if(length(remotes)) {
-	    remotesVersions <- lapply(remotes, getHighestRelease)
-	    names(remotesVersions) <- remotes
+	    remotes_versions <- lapply(remotes, getHighestRelease)
+	    names(remotes_versions) <- remotes
 	    
 	    # Add the remotes to the imports:
 	    imports <- c(
 	        imports, 
-	        remotesVersions
+	        remotes_versions
 	    )
 	    
 	    # Also get the remotes strings (for use in the Remotes field in DESCRIPTION):
-	    remotesStrings <- paste0(
+	    remotes_strings <- paste0(
 	        remotes, 
 	        "@", 
 	        getRstoxPackageVersionString(
 	            packageName = remotes, 
-	            version = unlist(remotesVersions)
+	            version = unlist(remotes_versions)
 	        )
 	    )
 	}
 	
+	# Get internal.dependencies version:
+	internal.dependencies_versions <- NULL
+	if(length(internal.dependencies) && length(additional_repositories)) {
+	    internal.dependencies_versions <- lapply(internal.dependencies, getHighestRelease)
+	    names(internal.dependencies_versions) <- internal.dependencies
+	    ## Mark these as exact dependencies by setting them as list:
+	    #internal.dependencies_versions <- lapply(internal.dependencies_versions, as.list)
+	    
+	    # Add the remotes to the imports:
+	    imports <- c(
+	        imports, 
+	        internal.dependencies_versions
+	    )
+	}
 	
 	# Construct the output list:
 	spec <- list(
@@ -369,13 +392,15 @@ packageSpecs <- function(
 		packageName = packageName, 
 		accountName = accountName, 
 		version = version, 
+		date = as.character(Sys.Date()), 
 		Rversion = Rversion, 
 		imports = imports, 
 		suggests = suggests, 
+		linkingto = linkingto, 
 		remotes = remotes, 
 		additional_repositories = additional_repositories, 
-		remotesVersions = remotesVersions, 
-		remotesStrings = remotesStrings, 
+		remotes_versions = remotes_versions, 
+		remotes_strings = remotes_strings, 
 		# Mandatory objects:
 		title = title, 
 		description = description, 
@@ -462,8 +487,9 @@ getDESCRIPTION <- function(spec){
 	# Paste and return the info:
 	out <- list(
 		"Package" = spec$packageName, 
-		"Title" = spec$title, 
 		"Version" = spec$version, 
+		"Date" = spec$date, 
+		"Title" = spec$title, 
 		"Authors@R" = getAuthors(spec$authors), 
 		"Depends" = Depends, 
 		"Description" = spec$description, 
@@ -530,16 +556,14 @@ getREADME <- function(spec){
 		#)
 		
 		# Add the alternative install:
-	    install <- c(
-			"# Install the latest GitHub release", 
-			getGitHub_InstallPath(
-				packageName = spec$packageName, 
-				accountName = spec$accountName, 
-				version = getRstoxPackageVersionString(
-				    packageName = spec$packageName, 
-				    version = spec$version
-				)
-			)
+	    install <- getGitHub_InstallPath(
+			packageName = spec$packageName, 
+			accountName = spec$accountName, 
+			version = getRstoxPackageVersionString(
+			    packageName = spec$packageName, 
+			    version = spec$version
+			), 
+			additional_repositories = spec$additional_repositories
 		)
 	}
 	
@@ -561,12 +585,13 @@ getREADME <- function(spec){
 	README <- list(
 		header,
 		paste("#", spec$description), 
+		paste("#", spec$details), 
 		install, 
 		spec$misc, 
 		releaseNotes
 	)
 	README <- README[lengths(README) > 0]
-	README <- lapply(README, append, rep("", 2))
+	README <- lapply(README, append, rep("", 1))
 	README <- unlist(README)
 	
 	return(README)
@@ -584,21 +609,21 @@ addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
 	if(length(spec$imports)){
 		use_package_with_min_version(
 			spec$imports, 
-			type = "imports"
+			type = "Imports"
 		)
 	}
 	# Add also the suggests:
 	if(length(spec$suggests)){
 		use_package_with_min_version(
 			spec$suggests, 
-			type = "suggests"
+			type = "Suggests"
 		)
 	}
 	# Add also the linkingto:
 	if(length(spec$linkingto)){
 		use_package_with_min_version(
 			spec$linkingto, 
-			type = "linkingto"
+			type = "LinkingTo"
 		)
 		#lapply(spec$linkingto, usethis::use_package, type="LinkingTo")
 	}
@@ -627,11 +652,11 @@ addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
 		)
 		writeLines(DESCRIPTION, DESCRIPTIONFile)
 	}
-	# Add the remotes directly:
+	# Add the additional_repositories directly:
 	if(length(spec$additional_repositories)){
 	    # Read the DESCRIPTION file:
 	    DESCRIPTION <- readLines(DESCRIPTIONFile)
-	    # Add remotes:
+	    # Add additional_repositories:
 	    DESCRIPTION <- c(
 	        DESCRIPTION, 
 	        "Additional_repositories: ", 
@@ -652,7 +677,7 @@ addImportsToDESCRIPTION <- function(spec, cpp=FALSE){
 #' 
 getPkgname <- function(spec){
 	# Paste title, description, details by linespaces and start all lines with the roxygen line header. There is a line separating the title and description:
-	out <- c(spec$title, spec$description, spec$details, spec$Rcpp)
+    out <- c(spec$title, spec$description, spec$details, spec$Rcpp)
 	out <- paste0("#' ", out, collapse="\n#'\n")
 	# Add the _PACKAGE line:
 	out <- paste(
@@ -669,11 +694,11 @@ getPkgname <- function(spec){
 ##### Package specific functions: #####
 ##### Rstox: #####
 title_Rstox <- function(version = "1.0"){
-	"Running StoX functionality independently in R"
+	"Running StoX Functionality Independently in R"
 }
 
 description_Rstox <- function(version = "1.0"){
-	"The package Rstox contains most of the functionality of the stock assesment utility StoX, which is an open source application fo acoustic-trawl and swept-area survey estimation."
+	"R implementation of the functionality of the stock assesment utility StoX, which is an open source application fo acoustic-trawl and swept-area survey estimation."
 }
 
 details_Rstox <- function(version = "1.0"){
@@ -683,6 +708,16 @@ details_Rstox <- function(version = "1.0"){
 		"Rstox also contains functions for generating and reporting parallel or zigzag transect lines for use in a survey through \\code{\\link{surveyPlanner}}.",
 		"Soon to be implemented is running the Estimated Catch at Age (ECA) model develped by the Norwegian Computing Center and the Norwegian Institute of Marine Research."
 	)
+}
+
+authors_Rstox <- function(version = "1.0"){
+    list(
+        list(given="Arne Johannes", family="Holmin",	role=c("cre", "aut"), email="arnejh@hi.no"), 
+        list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
+        list(given="Gjert Endre",	   family="Dingsoer",	  role=c("aut")),
+        list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
+        list(given="Espen",		 family="Johnsen",   role=c("aut"))
+     )
 }
 
 .onLoad_Rstox <- function(version = "1.0"){
@@ -780,11 +815,11 @@ misc_Rstox <- function(version = "1.0"){
 
 ##### RstoxFramework: #####
 title_RstoxFramework <- function(version = "1.0"){
-	"The engine of StoX"
+	"The Engine of StoX"
 }
 
 description_RstoxFramework <- function(version = "1.0"){
-	"This package contains all functions and framwork for running a StoX project."
+	"The framwork of StoX >= 3.0."
 }
 
 details_RstoxFramework <- function(version = "1.0"){
@@ -822,7 +857,7 @@ authors_RstoxFramework <- function(version = "1.0"){
 
 ##### RstoxData: #####
 title_RstoxData <- function(version = "1.0"){
-	"R libraries to parse and write fisheries biotic and acoustic data format"
+	"Utilities to Read Fisheries Biotic, Acoustic and Landing Data Formats"
 }
 
 description_RstoxData <- function(version = "1.0"){
@@ -830,7 +865,7 @@ description_RstoxData <- function(version = "1.0"){
 }
 
 details_RstoxData <- function(version = "1.0"){
-	"The RstoxData package contains functions for reading, filtering and writing biotic, acoustic and landing data as XML files. Filtering can be done by R syntax such as longitude > 10, or by pre defined functions such as inside()."
+	"The RstoxData package contains functions for reading, filtering and writing biotic, acoustic and landing data as XML files. Filtering can be done by R syntax such as longitude > 10, or by pre defined functions such as inside(). On computers that return errors when trying to run the Rtools through RStudio (most institutional Windows machines), install the binary directly from https://github.com/StoXProject/RstoxData/releases. Download the newest RstoxData zip file, click the \"Packages\" tab -> \"Install\" -> \"Install from:\" \"Package Archive File\" -> \"Install\". If the installer does not complain, the package is installed correctly."
 }
 
 authors_RstoxData <- function(version = "1.0"){
@@ -870,7 +905,7 @@ title_RstoxFDA <- function(version = "1.0"){
 }
 
 description_RstoxFDA <- function(version = "1.0"){
-	"This package is used to for fisheries dependent analysis. Including running the Estimated Catch at Age model through the Reca package developed by the Norwegian Computing Center."
+	"Fisheries dependent analysis, including running the Estimated Catch at Age model through the Reca package developed by the Norwegian Computing Center."
 }
 
 details_RstoxFDA <- function(version = "1.0"){
@@ -887,11 +922,11 @@ authors_RstoxFDA <- function(version = "1.0"){
 
 ##### RstoxSurveyPlanner: #####
 title_RstoxSurveyPlanner <- function(version = "1.0"){
-	"Survey design of acoustic-trawl and swept area surveys"
+	"Survey Design of Acoustic-trawl and Swept-area Surveys"
 }
 
 description_RstoxSurveyPlanner <- function(version = "1.0"){
-	"This package generates parallel or zig zag transects for use in acoustic-trawl and swept area surveys."
+	"Tools to generate parallel or zig zag transects for use in acoustic-trawl and swept area surveys."
 }
 
 details_RstoxSurveyPlanner <- function(version = "1.0"){
@@ -910,11 +945,11 @@ authors_RstoxSurveyPlanner <- function(version = "1.0"){
 
 ##### RstoxTempdoc: #####
 title_RstoxTempdoc <- function(version = "1.0"){
-	"Temporary package for documenting the RstoxFramework package"
+	"Temporary Package for Documenting the RstoxFramework Package"
 }
 
 description_RstoxTempdoc <- function(version = "1.0"){
-	"This package is merely for documenting RstoxFramework."
+	"Documenting RstoxFramework."
 }
 
 details_RstoxTempdoc <- function(version = "1.0"){
@@ -931,11 +966,11 @@ authors_RstoxTempdoc <- function(version = "1.0"){
 
 ##### RstoxBuild: #####
 title_RstoxBuild <- function(version = "1.0"){
-	"Package for building all Rstox packages"
+	"Package for Building All Rstox Packages"
 }
 
 description_RstoxBuild <- function(version = "1.0"){
-	"This package contains functionality for building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
+	"Building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
 }
 
 details_RstoxBuild <- function(version = "1.0"){
@@ -951,11 +986,11 @@ authors_RstoxBuild <- function(version = "1.0"){
 
 ##### RstoxBase: #####
 title_RstoxBase <- function(version = "1.0"){
-	"Base StoX functions"
+	"Base StoX Functions"
 }
 
 description_RstoxBase <- function(version = "1.0"){
-	"This package contains the base StoX functions used for survey estimation."
+	"Base StoX functions used for survey estimation."
 }
 
 details_RstoxBase <- function(version = "1.0"){
@@ -1049,7 +1084,7 @@ getPackageItem <- function(name, spec, packageName=NULL, version=NULL){
 	return(object)
 }
 # Funciton to get the install path to GitHub:
-getGitHub_InstallPath <- function(packageName = "Rstox", accountName = "StoXProject" , version = NULL, ref = NULL){
+getGitHub_InstallPath <- function(packageName = "Rstox", accountName = "StoXProject" , version = NULL, ref = NULL, additional_repositories = NULL){
 	# Get the relative GitHub path for the specific release:
 	path <- getGithubURL(
 		packageName = packageName, 
@@ -1071,7 +1106,30 @@ getGitHub_InstallPath <- function(packageName = "Rstox", accountName = "StoXProj
 	#}
 	
 	# Construct and return the install string:
-	string <- paste0("devtools::install_github(", "\"", path, "\"", ", ref = ", deparse(ref), ")")
+	if(length(additional_repositories)) {
+	    string <- paste0(
+	        "# Install the latest binary:\n", 
+	        "install.packages(", packageName, ", repo = c(\"https://stoxproject.github.io/repo\", \"https://cloud.r-project.org\"))\n", 
+	        "# ... or install the latest version from GitHub:\n", 
+	        "# devtools::install_github(", "\"", path, "\"", ", ref = ", deparse(ref), ")"
+	    )
+	}
+	else {
+	    string <- paste0(
+	        "# Install the latest GitHub release:\n", 
+	        "devtools::install_github(", "\"", path, "\"", ", ref = ", deparse(ref), ")"
+	    )
+	}
+	
+	string <- c(
+        string, 
+        paste0(
+            "# ... or install the develop version from GitHub:\n", 
+            "# devtools::install_github(", "\"", path, "\"", ", ref = \"develop\")"
+        )
+    )
+	
+	
 	return(string)
 }
 # Function to get the link to the (online) NEWS file on GitHub depending on the :
@@ -1377,15 +1435,37 @@ getFunctionArgumentDescriptions <- function(sourceDir, docDir = NULL) {
 }
 
 # Function to add a package to the DESCRIPTION file, optionally with minimum version:
-use_package_with_min_version <- function(packageList, type = "imports"){
-    
+use_package_with_min_version <- function(packageList, type = "Imports"){
     # Add each package with version if present:
-	mapply(
-		usethis::use_package, 
-		package = names(packageList), 
-		type = type, 
-		min_version = packageList
-	)
+	#mapply(
+	#	usethis::use_package, 
+	#	package = names(packageList), 
+	#	type = type, 
+	#	min_version = packageList
+	#)
+    
+    # Get the versions:
+    getVersionString <- function(version) {
+        if(length(version) == 0) {
+            "*"
+        }
+        else if(is.list(version)) {
+            paste("==", unlist(version))
+        }
+        else {
+            paste(">=", version)
+        }
+    }
+    
+    versions <- sapply(packageList, getVersionString)
+    
+    mapply(
+        desc::desc_set_dep, 
+        package = names(packageList), 
+        type = type, 
+        version = versions, 
+        file = usethis::proj_get()
+    )
 }
 
 # Function to build a Rstox package version string:
@@ -1398,29 +1478,31 @@ getRstoxPackageVersionString <- function(packageName, version) {
 
 
 getReleases <- function(packageName, accountName = "StoXProject", all.releases = FALSE) {
-    API <- githupPaths("api")
-    URL <- paste(API, accountName, packageName, "releases", sep = "/")
-    print(URL)
-    parsed <- tryCatch(
+    API <- githubPaths("api")
+    URL_releases <- paste(API, accountName, packageName, "releases", sep = "/")
+    #URL_tags <- paste(API, accountName, packageName, "tags", sep = "/")
+    print(URL_releases)
+    tryCatch(
         {
             # Access the API using the GITHUB_PAT (personal access token)
             pat <- Sys.getenv("GITHUB_PAT")
             if(nchar(pat)) {
-                api_data <- httr::GET(URL, httr::authenticate(Sys.getenv("GITHUB_PAT"), "x-oauth-basic", "basic"))
+                api_data <- httr::GET(URL_releases, httr::authenticate(Sys.getenv("GITHUB_PAT"), "x-oauth-basic", "basic"))
             }
             else {
                 warning("Please create a personal access token with the following procedure: Use `usethis::browse_github_pat()` to go the the GitHub page where you need to log in and click the green 'Generate token' button at the bottom of the page. Then copy this to the clipboard and use `usethis::edit_r_environ()` to open the .Renivron file. Add the token as `GITHUB_PAT=12345678901234567890` (replace with the copied token) and end the file with a line space. Save and close the file, and restart R to make the change effective.")
-                api_data <- httr::GET(URL)
+                api_data <- httr::GET(URL_releases)
             }
-            #httr::GET(URL, config = auth)
-            jsonlite::fromJSON(content(api_data, "text"), simplifyVector = FALSE)
+            parsed <<- jsonlite::fromJSON(httr::content(api_data, "text"), simplifyVector = FALSE)
         }, 
-        error = function(err) NULL
+        error = function(err) {
+            parsed <<- NULL
+        }
     )
     if(length(parsed) == 0) {
         return(data.table::data.table())
     }
-    #parsed <- jsonlite::fromJSON(URL, simplifyVector = FALSE)
+    
     releases <- sapply(parsed, "[[", "tag_name")
     if(all.releases || length(releases) == 0) {
         return(releases)
@@ -1507,6 +1589,9 @@ incrementHighestRelease <- function(packageName, type = c("patch", "minor", "maj
     
     nextVersion <- highestRelease
     nextVersion[[type]] <- nextVersion[[type]] + 1
+    
+    cat("Highest release: ", paste(unlist(highestRelease), collapse = "."), "\n")
+    cat("Next release: ", paste(unlist(nextVersion), collapse = "."), "\n")
     
     if(sting.out) {
         nextVersion <- paste(unlist(nextVersion), collapse = ".")
