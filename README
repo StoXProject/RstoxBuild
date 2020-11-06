@@ -1,4 +1,4 @@
-# RstoxBuild version: 1.0.1 (latest alpha, 2020-06-19)
+# RstoxBuild version: 1.0.1 (latest alpha, 2020-11-06)
 # R version: 3.6
 
 # Building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects.

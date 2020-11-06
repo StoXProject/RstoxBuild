@@ -1,6 +1,6 @@
 Package: RstoxBuild
 Version: 1.0.1
-Date: 18432
+Date: 2020-11-06
 Title: Package for Building All Rstox Packages
 Authors@R: c(
   person(given = "Arne Johannes", family = "Holmin", role = c("cre", "aut"), email = "arnejh@hi.no"))
@@ -21,4 +21,4 @@ Suggests:
     tiff,
     rJava,
     callr
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1
