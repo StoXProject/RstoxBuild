@@ -235,7 +235,7 @@ buildRstoxPackage <- function(
 	# Add linkedTo: Rcpp in the DESCRIPTION:
 	if(spec$useCpp) {
 	    if(!noRcpp) {
-			usethis::use_rcpp()
+	        #usethis::use_rcpp()
 			# Add the C++ specifics to the pkgnameFile:
 			write(c(spec$Rcpp, ""), pkgnameFile, append = TRUE)
 		}
