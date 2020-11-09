@@ -6,4 +6,4 @@ user;rootDir
 "sindrev";"E:/Arbeid/Koding/StockAssessmentTools/StoxProject"
 "ibrahim";"/home/user/repos/rstoxProject@github"
 "aasmunds";"E:/Projects/StoxProject"
-"espen";"D:/My Projects/2013 R/R_git"
+"espen";"D:/r_git"
