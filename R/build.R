@@ -27,6 +27,13 @@ getGithubAPI <- function(packageName, accountName = "StoXProject") {
 	paste(githubPaths("api"), accountName, packageName, "releases", sep = "/")
 }
 
+
+strwrap_file <- function(file, ...) {
+    l <- readLines(file)
+    l <- strwrap(l, ...)
+    writeLines(l, file)
+}
+
 ### # Function to get a list of release names of a package:
 ### getReleaseNames <- function(packageName, accountName = "StoXProject") {
 ### 	# Build the URL to list the releases:
@@ -124,6 +131,7 @@ buildRstoxPackage <- function(
 	noRcpp = FALSE, 
 	addManual = FALSE, 
 	addIndividualManuals = FALSE, 
+	globalVariables = NULL, 
 	type = c("patch", "minor", "major")
 ) {
 	
@@ -174,8 +182,32 @@ buildRstoxPackage <- function(
 	try(lapply(.libPaths(), function(x) utils::remove.packages(spec$packageName, x)), silent = TRUE)
 	
 	##### Write the pkgname.R file: #####
-	pkgnameFile <- file.path(spec$dir, "R", "pkgname.R")
+	#pkgnameFile <- file.path(spec$dir, "R", "pkgname.R")
+	pkgnameFile <- file.path(spec$dir, "R", paste0(packageName, "-package.R"))
 	write(c(spec$pkgname, ""), pkgnameFile)
+	##########
+	
+	##### Write the onAttach.R to the pkgname file: #####
+	if(length(globalVariables)) {
+	    globalVariablesText <- c(
+	        "# Global variables", 
+	        "utils::globalVariables(c(", 
+	        paste(
+	            "\t", 
+	            strwrap(
+	                paste0(
+	                    paste0(
+	                        "\"", sort(globalVariables), "\"", 
+	                        collapse = ", "
+	                    ), 
+	                    "))"
+	                ), 
+	                100 - 4
+	            )
+	        )
+	    )
+	    write(c(globalVariablesText, ""), pkgnameFile, append = TRUE)
+	}
 	##########
 	
 	##### Write the onLoad.R to the pkgname file: #####
@@ -313,7 +345,7 @@ packageSpecs <- function(
 	.onLoad = NULL,
 	.onUnload = NULL,
 	.onAttach = NULL,
-	misc = NULL, 
+	misc = NULL,
 	type = c("patch", "minor", "major")
 ) {
 	
@@ -455,8 +487,14 @@ packageSpecs <- function(
 	}
 	#spec$src_ <- file.path(spec$dir, "src_")
 	spec$Rcpp <- c(
+	    "## usethis namespace: start", 
 		paste0("#' @useDynLib ", spec$packageName, ", .registration = TRUE"), 
+		"## usethis namespace: end", 
+		"NULL", 
+		"", 
+		"## usethis namespace: start", 
 		"#' @importFrom Rcpp sourceCpp", 
+		"## usethis namespace: end", 
 		"NULL"
 	)
 	
@@ -500,10 +538,12 @@ getDESCRIPTION <- function(spec) {
 		"Package" = spec$packageName, 
 		"Version" = spec$version, 
 		"Date" = spec$date, 
-		"Title" = spec$title, 
+		#"Title" = spec$title, 
+		"Title" = paste(strwrap(spec$title, width = 80, exdent = 2), collapse = "\n"), 
 		"Authors@R" = getAuthors(spec$authors), 
 		"Depends" = Depends, 
-		"Description" = spec$description, 
+		#"Description" = spec$description, 
+		"Description" = paste(strwrap(spec$description, width = 80, exdent = 2), collapse = "\n"), 
 		"URL" = URL, 
 		"BugReports" = BugReports, 
 		"License" = spec$license, 
@@ -868,11 +908,13 @@ authors_RstoxFramework <- function(version = "1.0") {
 
 ##### RstoxData: #####
 title_RstoxData <- function(version = "1.0") {
-	"Utilities to Read Fisheries Biotic, Acoustic and Landing Data Formats"
+    # "Utilities to Read Fisheries Biotic, Acoustic and Landing Data Formats"
+	"Utilities to Read and Manipulate Fisheries' Trawl Survey, Acoustic Survey and Commercial Landings Data Formats"
 }
 
 description_RstoxData <- function(version = "1.0") {
-	"Tools to fetch and manipulate various data formats for fisheries (mainly geared towards biotic and acoustic data)."
+	#"Tools to fetch and manipulate various data formats for fisheries (mainly geared towards biotic and acoustic data)."
+    "Set of tools to read and manipulate various data formats for fisheries. Mainly catered towards scientific trawl survey sampling ('biotic') data, acoustic trawl data, and commercial fishing catch ('landings') data. Among the supported data formats are the data products from the Norwegian Institute Marine Research ('IMR') and the International Council for the Exploration of the Sea (ICES)."
 }
 
 details_RstoxData <- function(version = "1.0") {
@@ -886,7 +928,8 @@ authors_RstoxData <- function(version = "1.0") {
 		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
 		list(given="Arne Johannes", family="Holmin",	role=c("aut")),
 		list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
-		list(given="Espen",		 family="Johnsen",   role=c("aut"))
+		list(given="Espen",		 family="Johnsen",   role=c("aut")),
+		list(given="Norwegian Institute of Marine Research",   role=c("cph", "fnd"))
 	)
 }
 
@@ -1233,13 +1276,14 @@ isMaster <- function(version = "1.0") {
 getAuthor <- function(x) {
 	# Deparse and add parameter names:
 	out <- lapply(x, deparse)
-	out <- paste(names(out), out, sep=" = ", collapse=", ")
+	out <- paste0(names(out), " = ", out, collapse = ", \n    ")
 	# Enclose in a person function:
 	out <- paste0(
-		"person(",
-		out, 
-		")"
+	    "person(",
+	    out, 
+	    ")"
 	)
+	
 	return(out)
 }
 # Get one all author strings:

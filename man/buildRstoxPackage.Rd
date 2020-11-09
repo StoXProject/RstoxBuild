@@ -32,6 +32,7 @@ buildRstoxPackage(
   noRcpp = FALSE,
   addManual = FALSE,
   addIndividualManuals = FALSE,
+  globalVariables = NULL,
   type = c("patch", "minor", "major")
 )
 
