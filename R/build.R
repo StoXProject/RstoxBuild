@@ -887,11 +887,12 @@ authors_RstoxFramework <- function(version = "1.0") {
 		list(given="Ibrahim",	   family="Umar",	  role=c("aut")),
 		list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
 		list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
-		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
 		list(given="Esmael Musema", family="Hassen",	role=c("aut")),
+		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
 		list(given="Espen",		 family="Johnsen",   role=c("aut")),
 		list(given="Atle",		  family="Totland",   role=c("aut")),
-		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut"))
+		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut")),
+		list(given="Norwegian Institute of Marine Research",   role=c("cph", "fnd"))
 	)
 }
 
@@ -1055,7 +1056,14 @@ details_RstoxBase <- function(version = "1.0") {
 authors_RstoxBase <- function(version = "1.0") {
 	list(
 		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no"),
-		list(given="Espen",		 family="Johnsen",   role=c("aut"))
+		list(given="Ibrahim",	 family="Umar",	     role=c("aut")), 
+		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
+		list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
+		list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
+		list(given="Esmael Musema", family="Hassen",	role=c("aut")),
+		list(given="Espen",		 family="Johnsen",   role=c("aut")),
+		list(given="Atle",		  family="Totland",   role=c("aut")),
+		list(given="Norwegian Institute of Marine Research",   role=c("cph", "fnd"))
 	)
 }
 
