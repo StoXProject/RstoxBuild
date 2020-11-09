@@ -353,7 +353,7 @@ packageSpecs <- function(
 	if(is.character(packageName) && !file.exists(packageName) && !grepl('\\\\|/', packageName)) {
 		if(length(rootDir) == 0) {
 			user <- Sys.info()["user"]
-			rootDir <- utils::read.table(system.file("extdata", "rootDir.txt", package="RstoxBuild"), header = TRUE)
+			rootDir <- data.table::fread(system.file("extdata", "rootDir.txt", package="RstoxBuild"), sep = ";")
 			rootDir <- rootDir$rootDir[rootDir$user == user]
 		}
 		# The path to the package source code folder should contain a folder named by the package name, containing various optional files and folders like "test" or "temp", and a sub folder also named by the oackage name, which is the folder containing the package source code with DESCRIPTION, NAMESPACE, sub folder "R" etc.

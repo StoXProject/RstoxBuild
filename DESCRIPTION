@@ -18,7 +18,8 @@ LazyData: true
 Encoding: UTF-8
 Imports: 
     usethis,
-    devtools
+    devtools,
+    data.table
 Suggests: 
     Rstox,
     png,
