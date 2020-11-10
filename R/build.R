@@ -268,8 +268,11 @@ buildRstoxPackage <- function(
 	if(spec$useCpp) {
 	    if(!noRcpp) {
 	        #usethis::use_rcpp()
-			# Add the C++ specifics to the pkgnameFile:
-			write(c(spec$Rcpp, ""), pkgnameFile, append = TRUE)
+	        # Add the C++ specifics to the pkgnameFile:
+	        write(c(spec$Rcpp, ""), pkgnameFile, append = TRUE)
+	        
+	        # roxygen2::roxygenize prepares cpp (before we used usethis::use_rcpp(), which is not necessary expecct for the first time the package is created???):
+	        roxygen2::roxygenize(spec$dir)
 		}
 		# Also delete shared objects for safety:
 		sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names = TRUE)
@@ -355,6 +358,9 @@ packageSpecs <- function(
 			user <- Sys.info()["user"]
 			rootDir <- data.table::fread(system.file("extdata", "rootDir.txt", package="RstoxBuild"), sep = ";")
 			rootDir <- rootDir$rootDir[rootDir$user == user]
+			if(grepl(" ", rootDir, fixed = TRUE)) {
+			    stop("The directory specified in the file ", system.file("extdata", "rootDir.txt", package="RstoxBuild"), " for the current user (", user, ") contains spaces, which are not allowed for RstoxBuild. Please instruct the developer to change the path in the rootDir.txt file")
+			}
 		}
 		# The path to the package source code folder should contain a folder named by the package name, containing various optional files and folders like "test" or "temp", and a sub folder also named by the oackage name, which is the folder containing the package source code with DESCRIPTION, NAMESPACE, sub folder "R" etc.
 		packageName <- file.path(rootDir, packageName, packageName)
