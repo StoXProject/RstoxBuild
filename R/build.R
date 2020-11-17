@@ -197,7 +197,8 @@ buildRstoxPackage <- function(
 	            strwrap(
 	                paste0(
 	                    paste0(
-	                        "\"", sort(globalVariables), "\"", 
+	                        #"\"", sort(globalVariables), "\"", 
+	                        "\"", globalVariables, "\"", 
 	                        collapse = ", "
 	                    ), 
 	                    "))"
@@ -916,7 +917,8 @@ authors_RstoxFramework <- function(version = "1.0") {
 ##### RstoxData: #####
 title_RstoxData <- function(version = "1.0") {
     # "Utilities to Read Fisheries Biotic, Acoustic and Landing Data Formats"
-	"Utilities to Read and Manipulate Fisheries' Trawl Survey, Acoustic Survey and Commercial Landings Data Formats"
+	#"Utilities to Read and Manipulate Fisheries' Trawl Survey, Acoustic Survey and Commercial Landings Data Formats"
+    "Tools to Read and Manipulate Fisheries Data"
 }
 
 description_RstoxData <- function(version = "1.0") {
