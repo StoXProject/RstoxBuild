@@ -33,7 +33,8 @@ buildRstoxPackage(
   addManual = FALSE,
   addIndividualManuals = FALSE,
   globalVariables = NULL,
-  type = c("patch", "minor", "major")
+  type = c("patch", "minor", "major"),
+  date = NULL
 )
 
 packageSpecs(
@@ -59,7 +60,8 @@ packageSpecs(
   .onUnload = NULL,
   .onAttach = NULL,
   misc = NULL,
-  type = c("patch", "minor", "major")
+  type = c("patch", "minor", "major"),
+  date = NULL
 )
 }
 \arguments{

@@ -132,7 +132,8 @@ buildRstoxPackage <- function(
 	addManual = FALSE, 
 	addIndividualManuals = FALSE, 
 	globalVariables = NULL, 
-	type = c("patch", "minor", "major")
+	type = c("patch", "minor", "major"), 
+	date = NULL
 ) {
 	
     # Get the specifications of the package:
@@ -159,7 +160,8 @@ buildRstoxPackage <- function(
 		.onAttach = .onAttach, 
 		misc = misc, 
 		authors = authors, 
-		type = type
+		type = type,
+		date = date
 	)
 	
 	# Set the path to the package for usethis:
@@ -350,7 +352,8 @@ packageSpecs <- function(
 	.onUnload = NULL,
 	.onAttach = NULL,
 	misc = NULL,
-	type = c("patch", "minor", "major")
+	type = c("patch", "minor", "major"), 
+	date = NULL
 ) {
 	
 	# If the packageName is a string with no slashes and does not exist as a directory, locate the directories of the developers defined in the 
@@ -441,7 +444,7 @@ packageSpecs <- function(
 		packageName = packageName, 
 		accountName = accountName, 
 		version = version, 
-		date = as.character(Sys.Date()), 
+		date = if(length(date)) date else as.character(Sys.Date()), 
 		Rversion = Rversion, 
 		imports = imports, 
 		suggests = suggests, 
