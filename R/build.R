@@ -257,6 +257,10 @@ buildRstoxPackage <- function(
 	# Remove current documentation and NAMESPACE, and then re-document without C++:
 	unlink(file.path(spec$dir, "man"), recursive = TRUE, force = TRUE)
 	unlink(NAMESPACEFile, force = TRUE)
+	
+	# If troubles with inistallation occurres, copy the NAMESPACE file from GitHub before devtools::document:
+	#browser()
+	
 	devtools::document(spec$dir)
 	
 	# Build individual function PDFs for use by the GUI:
@@ -1566,7 +1570,7 @@ getReleases <- function(packageName, accountName = "StoXProject", all.releases =
                 api_data <- httr::GET(URL_releases, httr::authenticate(Sys.getenv("GITHUB_PAT"), "x-oauth-basic", "basic"))
             }
             else {
-                warning("Please create a personal access token with the following procedure: Use `usethis::browse_github_pat()` to go the the GitHub page where you need to log in and click the green 'Generate token' button at the bottom of the page. Then copy this to the clipboard and use `usethis::edit_r_environ()` to open the .Renivron file. Add the token as `GITHUB_PAT=12345678901234567890` (replace with the copied token) and end the file with a line space. Save and close the file, and restart R to make the change effective.")
+                warning("Please create a personal access token with the following procedure: Use `usethis::create_github_token()` to go the the GitHub page where you need to log in and click the green 'Generate token' button at the bottom of the page, but be sure to create personalized note in the required field (you will be reminded of this if not). Then copy this to the clipboard and use `usethis::edit_r_environ()` to open the .Renivron file. Add the token as `GITHUB_PAT=12345678901234567890` (replace with the copied token) and end the file with a line space. Save and close the file, and restart R to make the change effective.")
                 api_data <- httr::GET(URL_releases)
             }
             parsed <<- jsonlite::fromJSON(httr::content(api_data, "text"), simplifyVector = FALSE)
