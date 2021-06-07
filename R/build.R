@@ -133,7 +133,8 @@ buildRstoxPackage <- function(
 	addIndividualManuals = FALSE, 
 	globalVariables = NULL, 
 	type = c("patch", "minor", "major"), 
-	date = NULL
+	date = NULL, 
+	parallelTest = FALSE
 ) {
 	
     # Get the specifications of the package:
@@ -161,7 +162,8 @@ buildRstoxPackage <- function(
 		misc = misc, 
 		authors = authors, 
 		type = type,
-		date = date
+		date = date, 
+		parallelTest = parallelTest
 	)
 	
 	# Set the path to the package for usethis:
@@ -357,7 +359,8 @@ packageSpecs <- function(
 	.onAttach = NULL,
 	misc = NULL,
 	type = c("patch", "minor", "major"), 
-	date = NULL
+	date = NULL, 
+	parallelTest = FALSE
 ) {
 	
 	# If the packageName is a string with no slashes and does not exist as a directory, locate the directories of the developers defined in the 
@@ -470,9 +473,10 @@ packageSpecs <- function(
 		misc = misc, 
 		# Other specs:
 		onCran = onCran, 
-		license = license#, 
+		license = license, 
 		#NEWSfile = NEWSfile, 
 		#NEWS = NEWS
+		parallelTest = parallelTest
 	)
 	
 	mandatory <- c("title", "description", "details", "authors")
@@ -564,6 +568,11 @@ getDESCRIPTION <- function(spec) {
 		"LazyData" = "true", 
 		"Encoding" = "UTF-8"
 	)
+	if(spec$parallelTest) {
+	    out[["Config/testthat/edition"]] = 3
+	    out[["Config/testthat/parallel"]] = "true"
+	}
+	
 	out <- paste(names(out), out, sep=": ", collapse="\n")
 	# Add a new line ending the file:
 	out <- paste0(out, "\n")
@@ -1668,7 +1677,19 @@ incrementHighestRelease <- function(packageName, type = c("patch", "minor", "maj
     highestRelease <- getHighestRelease(packageName, sting.out = FALSE, accountName = accountName)
     
     nextVersion <- highestRelease
-    nextVersion[[type]] <- nextVersion[[type]] + 1
+    if(type == "patch") {
+        nextVersion[[type]] <- nextVersion[[type]] + 1
+    }
+    else if(type == "minor") {
+        nextVersion[[type]] <- nextVersion[[type]] + 1
+        nextVersion$patch <- 0
+    }
+    else if(type == "major") {
+        nextVersion[[type]] <- nextVersion[[type]] + 1
+        nextVersion$minor <- 0
+        nextVersion$patch <- 0
+    }
+    
     
     cat("Highest release: ", paste(unlist(highestRelease), collapse = "."), "\n")
     cat("Next release: ", paste(unlist(nextVersion), collapse = "."), "\n")

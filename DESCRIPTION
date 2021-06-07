@@ -1,6 +1,6 @@
 Package: RstoxBuild
 Version: 1.0
-Date: 2020-12-21
+Date: 2021-06-02
 Title: Package for Building All Rstox Packages
 Authors@R: c(
   person(given = "Arne Johannes", 
