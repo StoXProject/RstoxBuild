@@ -1,13 +1,13 @@
 Package: RstoxBuild
 Version: 1.0
-Date: 2021-06-02
+Date: 2021-10-18
 Title: Package for Building All Rstox Packages
 Authors@R: c(
   person(given = "Arne Johannes", 
     family = "Holmin", 
     role = c("cre", "aut"), 
     email = "arnejh@hi.no"))
-Depends: R (>= 3.5)
+Depends: R (>= 3.6)
 Description: Building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA,
   RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated
   testing of Rstox though test projects.
@@ -16,4 +16,15 @@ BugReports: https://github.com/StoXProject/RstoxBuild/issues
 License: LGPL-3
 LazyData: true
 Encoding: UTF-8
+Imports: 
+    data.table,
+    devtools,
+    usethis
+Suggests: 
+    tiff,
+    jpeg,
+    png,
+    Rstox,
+    rJava,
+    callr
 RoxygenNote: 7.1.1

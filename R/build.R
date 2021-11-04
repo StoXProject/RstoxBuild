@@ -5,7 +5,6 @@
 # 2.	RstoxData
 # 3.	RstoxFDA
 # 4.	RstoxSurveyPlanner
-# 5a.	RstoxTempdoc
 # 5b.	RstoxBuild
 
 
@@ -136,8 +135,7 @@ buildRstoxPackage <- function(
 	date = NULL, 
 	parallelTest = FALSE
 ) {
-	
-    # Get the specifications of the package:
+	# Get the specifications of the package:
 	spec <- packageSpecs(
 		packageName = packageName, 
 		accountName = accountName, 
@@ -183,7 +181,7 @@ buildRstoxPackage <- function(
 	
 	
 	# Clear the installed package:
-	try(lapply(.libPaths(), function(x) utils::remove.packages(spec$packageName, x)), silent = TRUE)
+	#try(lapply(.libPaths(), function(x) utils::remove.packages(spec$packageName, x)), silent = TRUE)
 	
 	##### Write the pkgname.R file: #####
 	#pkgnameFile <- file.path(spec$dir, "R", "pkgname.R")
@@ -221,7 +219,7 @@ buildRstoxPackage <- function(
 	}
 	##########
 	
-	##### Write the onLoad.R to the pkgname file: #####
+	##### Write the onUnload to the pkgname file: #####
 	if(length(spec$.onUnload)) {
 	    write(c(spec$.onUnload, ""), pkgnameFile, append = TRUE)
 	}
@@ -254,13 +252,62 @@ buildRstoxPackage <- function(
 	addImportsToDESCRIPTION(spec)
 	##########
 	
+	# For RstoxFramework check that the current version is the one used in the OfficialRstoxFrameworkVersions.txt:
+	if(spec$packageName == "RstoxFramework") {
+	    ## Read the 
+	    #OfficialRstoxFrameworkVersionsFile <- file.path(spec$dir, "inst", "versions", "OfficialRstoxFrameworkVersions.txt")
+	    #OfficialRstoxFrameworkVersions <- data.table::fread(OfficialRstoxFrameworkVersionsFile)
+	    #vesionInOfficialRstoxFrameworkVersions <- utils::tail(OfficialRstoxFrameworkVersions$RstoxFramework, 1)
+	    #if(vesionInOfficialRstoxFrameworkVersions != spec$version) {
+	    #    warning("The last row of OfficialRstoxFrameworkVersions.txt must contain the current RstoxFramework version (was ", vesionInOfficialRstoxFrameworkVersions, ", should be ", spec$version, ").")
+	    #}
+	    
+	    OfficialRstoxFrameworkVersionsFile <- file.path(spec$dir, "inst", "versions", "OfficialRstoxFrameworkVersions.txt")
+	    OfficialRstoxFrameworkVersions <- data.table::fread(OfficialRstoxFrameworkVersionsFile)
+	    # Find and delete any existing line with the current Framework version:
+	    atCurrentRstoxFramework <- which(OfficialRstoxFrameworkVersions$RstoxFramework == spec$version)
+	    if(length(atCurrentRstoxFramework)) {
+	        OfficialRstoxFrameworkVersions <- OfficialRstoxFrameworkVersions[-atCurrentRstoxFramework]
+	    }
+	    
+	    # Get the order of the depedene Rstox packages, as listed in OfficialRstoxFrameworkVersions.txt:
+	    RstoxPackagesOrder <- sub("\\_.*", "", read.csv(textConnection(tail(OfficialRstoxFrameworkVersions, 1)$Dependencies), header = FALSE))
+	    RstoxPackages <- subset(spec$imports,  startsWith(names(spec$imports), "Rstox"))
+	    RstoxPackages <- RstoxPackages[RstoxPackagesOrder]
+	    
+	    # Add the current version, with the latest versions of the dependencies from GitHub
+	    newStoXVersion <- packageSpecsGeneral(
+	        packageName = "StoX", 
+	        accountName = accountName, 
+	        version = "current", 
+	        date = NULL, 
+	        rootDir = NULL, 
+	        type = type
+	    )$version
+	          
+	                                      
+	    newRow <- data.table(
+	        StoX = newStoXVersion, 
+	        RstoxFramework = spec$version, 
+	        Dependencies = paste(names(RstoxPackages), RstoxPackages,  collapse = ",",  sep = "_"), 
+	        Official = isOfficial(spec$version)
+	    )
+	    
+	    OfficialRstoxFrameworkVersions <- rbind(
+	        OfficialRstoxFrameworkVersions, 
+	        newRow
+	    )
+	    
+	    data.table::fwrite(OfficialRstoxFrameworkVersions, OfficialRstoxFrameworkVersionsFile, sep = "\t")
+	    
+	}
 
 	##### Create documentation: #####
 	# Remove current documentation and NAMESPACE, and then re-document without C++:
 	unlink(file.path(spec$dir, "man"), recursive = TRUE, force = TRUE)
 	unlink(NAMESPACEFile, force = TRUE)
 	
-	# If troubles with inistallation occurres, copy the NAMESPACE file from GitHub before devtools::document:
+	# If troubles with installation occurs, such as "pkgdir must refer to the directory containing an R package", copy the NAMESPACE file from GitHub before devtools::document:
 	#browser()
 	
 	devtools::document(spec$dir)
@@ -332,7 +379,6 @@ buildRstoxPackage <- function(
 	#path
 }
 #' 
-#' @export
 #' @rdname buildRstoxPackage
 # 
 packageSpecs <- function(
@@ -363,38 +409,16 @@ packageSpecs <- function(
 	parallelTest = FALSE
 ) {
 	
-	# If the packageName is a string with no slashes and does not exist as a directory, locate the directories of the developers defined in the 
-	if(is.character(packageName) && !file.exists(packageName) && !grepl('\\\\|/', packageName)) {
-		if(length(rootDir) == 0) {
-			user <- Sys.info()["user"]
-			rootDir <- data.table::fread(system.file("extdata", "rootDir.txt", package="RstoxBuild"), sep = ";")
-			rootDir <- rootDir$rootDir[rootDir$user == user]
-			if(grepl(" ", rootDir, fixed = TRUE)) {
-			    stop("The directory specified in the file ", system.file("extdata", "rootDir.txt", package="RstoxBuild"), " for the current user (", user, ") contains spaces, which are not allowed for RstoxBuild. Please instruct the developer to change the path in the rootDir.txt file")
-			}
-		}
-		# The path to the package source code folder should contain a folder named by the package name, containing various optional files and folders like "test" or "temp", and a sub folder also named by the oackage name, which is the folder containing the package source code with DESCRIPTION, NAMESPACE, sub folder "R" etc.
-		packageName <- file.path(rootDir, packageName, packageName)
-	}
 	
-	# Extract the package name from the path to the package source code folder:
-	dir <- packageName
-	packageName <- basename(packageName)
-	
-	# Get version:
-	if(identical(version, "current")) {
-		#version <- getCurrentVersion(packageName)
-		version <- incrementHighestRelease(packageName, type = type, sting.out = TRUE, accountName = accountName)
-	}
-	
-	## Get NEWS file and NEWS;
-	#NEWSfile <- file.path(dir, "NEWS")
-	#if(startsWith(readLines(NEWSfile, 1), "#")) {
-	#	NEWS <- getNews_old(NEWSfile, version = version)
-	#}
-	#else{
-	#	NEWS <- getNews(NEWSfile, version = version)
-	#}
+    
+    specGeneral <- packageSpecsGeneral(
+        packageName = packageName, 
+        accountName = accountName, 
+        version = version, 
+        date = date, 
+        rootDir = rootDir, 
+        type = type
+    )
 	
 	# Assure that imports, suggests and linkingto are named lists:
 	imports <- asNamedList(imports)
@@ -446,12 +470,7 @@ packageSpecs <- function(
 	
 	# Construct the output list:
 	spec <- list(
-		# Paths, names and dependencies:
-		dir = dir, 
-		packageName = packageName, 
-		accountName = accountName, 
-		version = version, 
-		date = if(length(date)) date else as.character(Sys.Date()), 
+	    # Paths, names and dependencies:
 		Rversion = Rversion, 
 		imports = imports, 
 		suggests = suggests, 
@@ -478,6 +497,7 @@ packageSpecs <- function(
 		#NEWS = NEWS
 		parallelTest = parallelTest
 	)
+	spec <- c(specGeneral, spec)
 	
 	mandatory <- c("title", "description", "details", "authors")
 	optional <- c(".onLoad", ".onUnload", ".onAttach", "misc")
@@ -519,6 +539,59 @@ packageSpecs <- function(
 	return(spec)
 }
 
+
+packageSpecsGeneral <- function(
+    packageName, 
+    accountName = "StoXProject", 
+    version = "current", 
+    date = NULL, 
+    rootDir = NULL, 
+    type = c("patch", "minor", "major")
+) {
+    
+    
+    # If the packageName is a string with no slashes and does not exist as a directory, locate the directories of the developers defined in the 
+    if(is.character(packageName) && !file.exists(packageName) && !grepl('\\\\|/', packageName)) {
+        if(length(rootDir) == 0) {
+            user <- Sys.info()["user"]
+            rootDir <- data.table::fread(system.file("extdata", "rootDir.txt", package="RstoxBuild"), sep = ";")
+            rootDir <- rootDir$rootDir[rootDir$user == user]
+            if(grepl(" ", rootDir, fixed = TRUE)) {
+                stop("The directory specified in the file ", system.file("extdata", "rootDir.txt", package="RstoxBuild"), " for the current user (", user, ") contains spaces, which are not allowed for RstoxBuild. Please instruct the developer to change the path in the rootDir.txt file")
+            }
+        }
+        # The path to the package source code folder should contain a folder named by the package name, containing various optional files and folders like "test" or "temp", and a sub folder also named by the oackage name, which is the folder containing the package source code with DESCRIPTION, NAMESPACE, sub folder "R" etc.
+        packageName <- file.path(rootDir, packageName, packageName)
+    }
+    
+    # Extract the package name from the path to the package source code folder:
+    dir <- packageName
+    packageName <- basename(packageName)
+    
+    
+    # Get version:
+    if(identical(version, "current")) {
+        #version <- getCurrentVersion(packageName)
+        version <- incrementHighestRelease(packageName, type = type, sting.out = TRUE, accountName = accountName)
+    }
+    lastOfficialVersion <- getHighestRelease(packageName, sting.out = TRUE, accountName = accountName, types = c("minor", "major"))
+    
+    spec <- list(
+        # Paths, names and dependencies:
+        dir = dir, 
+        packageName = packageName, 
+        accountName = accountName, 
+        version = version, 
+        lastOfficialVersion = lastOfficialVersion, 
+        date = if(length(date)) date else as.character(Sys.Date())
+    )
+    
+    return(spec)
+}
+    
+    
+    
+    
 
 ##############################################
 ##############################################
@@ -1023,26 +1096,6 @@ authors_RstoxSurveyPlanner <- function(version = "1.0") {
 }
 ##########
 
-##### RstoxTempdoc: #####
-title_RstoxTempdoc <- function(version = "1.0") {
-	"Temporary Package for Documenting the RstoxFramework Package"
-}
-
-description_RstoxTempdoc <- function(version = "1.0") {
-	"Documenting RstoxFramework."
-}
-
-details_RstoxTempdoc <- function(version = "1.0") {
-	"This package will be deleted once the development of the RstoxFramework package has reached a version with identical or expectedly differing output as StoX 3.0."
-}
-
-authors_RstoxTempdoc <- function(version = "1.0") {
-	list(
-		list(given="Arne Johannes", family="Holmin",  role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Atle",		  family="Totland", role=c("aut"))
-	)
-}
-##########
 
 ##### RstoxBuild: #####
 title_RstoxBuild <- function(version = "1.0") {
@@ -1062,6 +1115,16 @@ authors_RstoxBuild <- function(version = "1.0") {
 		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
 	)
 }
+
+#.onLoad_RstoxBuild <- function(version = "1.0") {
+#    out <- c(
+#        ".onLoad <- function(libname, pkgname) {", 
+#        "\t# Initiate the RstoxBuild environment:", 
+#        "\tlibrary(data.table)", 
+#        "} "
+#    )
+#    paste(out, collapse="\n")
+#}
 ##########
 
 ##### RstoxBase: #####
@@ -1101,6 +1164,46 @@ authors_RstoxBase <- function(version = "1.0") {
 	paste(out, collapse="\n")
 }
 ##########
+
+
+
+##### RstoxNMD: #####
+title_RstoxNMD <- function(version = "1.0") {
+    "Download data from the Norwegian Marien Data center (NMD)"
+}
+
+description_RstoxNMD <- function(version = "1.0.0") {
+    "Download reference data and cruise data from the Norwegian Marien Data center (NMD)."
+}
+
+details_RstoxNMD <- function(version = "1.0.0") {
+    "This package contains functionality extracted from the old Rstox package. Use getNMDinfo() to get reference data and getNMDdata() to download cruise data."
+}
+
+authors_RstoxNMD <- function(version = "1.0.0") {
+    list(
+        list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no"),
+        list(given="Ibrahim",	 family="Umar",	     role=c("aut")), 
+        list(given="Sindre",		family="Vatnehol",  role=c("aut")),
+        list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
+        list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
+        list(given="Espen",		 family="Johnsen",   role=c("aut")),
+        list(given="Norwegian Institute of Marine Research",   role=c("cph", "fnd"))
+    )
+}
+
+.onLoad_RstoxNMD <- function(version = "1.0.0") {
+    out <- c(
+        ".onLoad <- function(libname, pkgname) {", 
+        "\t# Initiate the RstoxNMD environment:", 
+        "\tinitiateRstoxNMD()", 
+        "} "
+    )
+    paste(out, collapse="\n")
+}
+##########
+
+
 
 ##### Rstox: #####
 title_RstoxAPI <- function(version = "1.0") {
@@ -1593,19 +1696,25 @@ getReleases <- function(packageName, accountName = "StoXProject", all.releases =
     }
     
     releases <- sapply(parsed, "[[", "tag_name")
+    
     if(all.releases || length(releases) == 0) {
         return(releases)
     }
     else {
         # Get valid release names, which are those starting with the package name:
-        valid <- startsWith(releases, packageName)
-        validReleases <- releases[valid]
-        if(length(validReleases) == 0) {
-            stop("No valid releases")
-        }
+        #valid <- startsWith(releases, packageName)
+        #validReleases <- releases[valid]
+        #if(length(validReleases) == 0) {
+        #    stop("No valid releases")
+        #}
         # Get versions:
         #versions <- sub("^[^-v]*", "", validReleases)
-        versions <- sub(".*-v", "", validReleases)
+        versions <- sub(".*-v", "", releases)
+        
+        # Also try to remove the package name:
+        versions <- sub(paste0(packageName, "-v"), "", versions)
+        versions <- sub(paste0(packageName, "v"), "", versions)
+        versions <- sub("^v", "", versions)
         
         # Get the three individual numbers, which are separated by dot:
         versionsNumeric <- strsplit(versions, ".", fixed = TRUE)
@@ -1633,7 +1742,7 @@ getReleases <- function(packageName, accountName = "StoXProject", all.releases =
 }
 
 
-getHighestRelease <- function(packageName, sting.out = TRUE, accountName = "StoXProject") {
+getHighestRelease <- function(packageName, sting.out = TRUE, accountName = "StoXProject", types = c("patch", "minor", "major")) {
     
     # Get release version numbers:
     versionsNumeric <- getReleases(packageName, accountName = accountName, all.releases = FALSE)
@@ -1658,8 +1767,15 @@ getHighestRelease <- function(packageName, sting.out = TRUE, accountName = "StoX
     }
     
     # Add 1 to the specified version number:
-    highestVersion <- versionsNumeric[versionOrder[[1]], ]
-    highestVersion <- as.list(highestVersion)
+    versionsNumeric <- versionsNumeric[versionOrder, ]
+    
+    # Subset to the requested types:
+    versionsNumeric[, type := "patch"]
+    versionsNumeric[patch == "0" & minor == "0", type := "major"]
+    versionsNumeric[patch == "0" & minor != "0", type := "minor"]
+    versionsNumeric <- subset(versionsNumeric, type %in% types)
+    
+    highestVersion <- as.list(versionsNumeric[1, names(versionsNumeric) != "type", with=FALSE])
     
     if(sting.out) {
         highestVersion <- paste(unlist(highestVersion), collapse = ".")
@@ -1709,3 +1825,155 @@ asNamedList <- function(x, values) {
 }
 ##########
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################
+##############################################
+#' Function for building Rstox packages
+#'
+#' \code{buildRstoxPackage} is used in the continous development of Rstox, writing .onLoad, .onAttach, pkgname, DESCRIPTION and README files and adding dependencies to the NAMEPACE file.\cr \cr
+#' \code{packageSpecs} gets all specifications of the package from separate funcitons for each package into a list.\cr \cr
+#'
+#' @param dir	The directory holding the package structure.
+#' @param check	Logical: If TRUE run devtools::check() on the package.\code{\link[RstoxBase]{StratumArea}}
+#'
+#' @export
+#'
+prepareStoX <- function(
+    accountName = "StoXProject", 
+    version = "current", 
+    date = NULL, 
+    rootDir = NULL, 
+    type = c("patch", "minor", "major")
+) {
+    
+    # Get the specs such as ersion and date:
+    specGeneral <- packageSpecsGeneral(
+        packageName = "StoX", 
+        accountName = accountName, 
+        version = version, 
+        date = date, 
+        rootDir = rootDir, 
+        type = type
+    )
+    
+    
+    # Read package.json and change the version:
+    package.json_path <- file.path(specGeneral$dir, "package.json")
+    package.json <- readLines(package.json_path)
+    # Find the line starting with '"version": ':
+    atVersionKey <- "\"version\": "
+    atVersion <- startsWith(trimws(package.json),  atVersionKey)
+    if(sum(atVersion) != 1) {
+        stop("The file ", package.json_path, " does not contain a line starting with ", atVersionKey, ".")
+    }
+    package.json[atVersion] <- paste0(atVersionKey, "\"",  specGeneral$version, "\",")
+    
+    # Write the changes:
+    tmp <- tempdir()
+    file.copy(package.json_path, tmp)
+    message("File ",  package.json_path, "backed up to ", tmp)
+    writeLines(package.json, package.json_path)
+    
+    
+    
+    OfficialRstoxFrameworkVersionsFilePath <- file.path(specGeneral$dir, "srv/OfficialRstoxFrameworkVersions.txt")
+    
+    # If official, update version in Readme:
+    #if(isOfficial(specGeneral$version)) {
+    
+    # Copy OfficialRstoxFrameworkVersions.txt  and Versions.R, and check OfficialRstoxFrameworkVersions.txt:
+    VersionsFilePath <- file.path(specGeneral$dir, "srv/Versions.R")
+    download.file(
+        "https://raw.githubusercontent.com/StoXProject/RstoxFramework/master/R/Versions.R", 
+        VersionsFilePath
+    )
+    download.file(
+        "https://raw.githubusercontent.com/StoXProject/RstoxFramework/master/inst/versions/OfficialRstoxFrameworkVersions.txt", 
+        OfficialRstoxFrameworkVersionsFilePath
+    )
+    #}
+    
+    
+    # Check the StoX version in the OfficialRstoxFrameworkVersions.txt:
+    OfficialRstoxFrameworkVersions <- data.table::fread(OfficialRstoxFrameworkVersionsFilePath)
+    vesionInOfficialRstoxFrameworkVersions <- utils::tail(OfficialRstoxFrameworkVersions$StoX, 1)
+    if(vesionInOfficialRstoxFrameworkVersions != specGeneral$version) {
+        stop("The last row of OfficialRstoxFrameworkVersions.txt must contain the current StoX version (was ", vesionInOfficialRstoxFrameworkVersions, ", should be ", specGeneral$version, ").")
+    }
+    
+    
+    # Check that the NEWS has been updated for an official release:
+    NEWS.md_path <- file.path(specGeneral$dir, "NEWS.md")
+    NEWS.md <- readLines(NEWS.md_path)
+    atVersions <- startsWith(tolower(trimws(NEWS.md)), "# stox v")
+    versions <- gsub(".*# stox v(.+) \\(.*", "\\1", tolower(NEWS.md[atVersions]))
+    dates <- gsub(".*\\((.+)\\).*", "\\1", NEWS.md[atVersions])
+    if(! specGeneral$version %in% versions) {
+        stop("The file ", NEWS.md_path, " must be updated for all releases. Contained ",paste(versions, collapse = ", "), ". Needed ", specGeneral$version, ".")
+    }
+    newsDate <- dates[versions == specGeneral$lastOfficialVersion]
+    
+    
+    # Read README.md and change the version:
+    README.md_path <- file.path(specGeneral$dir, "README.md")
+    README.md <- readLines(README.md_path)
+    atSee <- startsWith(README.md, "See [release")
+    if(sum(atSee) != 1) {
+        stop("The file ", README.md_path, " does not contain a line of the following form: See [release notes for StoX 3.1.0](https://github.com/StoXProject/StoX/blob/master/NEWS.md#Stox-v310-2021-06-18).")
+    }
+    
+    stringToreplace <- gsub(".*release notes for StoX (.+)\\]\\(.*", "\\1", README.md[atSee])
+    README.md[atSee] <- sub(stringToreplace, specGeneral$lastOfficialVersion, README.md[atSee])
+    
+    # Change version in link to NEWS:
+    versionDateString <- paste0(gsub("\\.", "", specGeneral$lastOfficialVersion),  "-",  newsDate)
+    stringToreplace <- gsub(".*NEWS.md#Stox-v(.+)\\)\\..*", "\\1", README.md[atSee])
+    README.md[atSee] <- gsub(stringToreplace, versionDateString, README.md[atSee])
+    
+    # Change version in link to release:
+    atDownload <- startsWith(README.md, "Download StoX from (https")
+    if(sum(atDownload) != 1) {
+        stop("The file ", README.md_path, " does not contain a line of the following form (starting with): Download StoX from (https://github.com/StoXProject/StoX/releases/tag/v3.1.0)")
+    }
+    
+    stringToreplace <- gsub(".*releases/tag/v(.+)\\)\\. For.*", "\\1", README.md[atDownload])
+    README.md[atDownload] <- gsub(stringToreplace, specGeneral$lastOfficialVersion, README.md[atDownload])
+    
+    # Write the changes:
+    file.copy(README.md_path, tmp)
+    message("File ",  README.md_path, "backed up to ", tmp)
+    writeLines(README.md, README.md_path)
+    
+    
+    
+    
+}
+
+
+isOfficial <- function(version) {
+    endsWith(version, ".0.0") | endsWith(version, ".0")
+}
+
+
+
+updateOfficialRstoxFrameworkVersions.txt <- function() {
+    
+}
