@@ -337,7 +337,12 @@ buildRstoxPackage <- function(
 	
 	##### Run R cmd check with devtools: #####
 	if(check) {
-		devtools::check(pkg=spec$dir)
+		#devtools::check(pkg=spec$dir)
+	    rcmdcheck::rcmdcheck(
+	        spec$dir, 
+	        args = c("--no-manual", "--as-cran"), 
+	        error_on = "error", check_dir = "check"
+        )
 		# args = "--no-examples"
 	}
 	##########
@@ -575,6 +580,10 @@ packageSpecsGeneral <- function(
         version <- incrementHighestRelease(packageName, type = type, sting.out = TRUE, accountName = accountName)
     }
     lastOfficialVersion <- getHighestRelease(packageName, sting.out = TRUE, accountName = accountName, types = c("minor", "major"))
+    if(type[1] %in% "minor") {
+        lastOfficialVersion <- incrementHighestRelease(packageName, type = type, sting.out = TRUE, accountName = accountName)
+        
+    }
     
     spec <- list(
         # Paths, names and dependencies:
@@ -1001,6 +1010,17 @@ authors_RstoxFramework <- function(version = "1.0") {
 	)
 	paste(out, collapse="\n")
 }
+
+#.onAttach_RstoxFramework <- function(version = "1.0") {
+#    out <- c(
+#        ".onAttach <- function(libname, pkgname) {", 
+#        "\trequireNamespace(\"data.table\")", 
+#        "} "
+#    )
+#    paste(out, collapse="\n")
+#}
+
+
 ##########
 
 ##### RstoxData: #####
@@ -1930,7 +1950,6 @@ prepareStoX <- function(
         stop("The file ", NEWS.md_path, " must be updated for all releases. Contained ",paste(versions, collapse = ", "), ". Needed ", specGeneral$version, ".")
     }
     newsDate <- dates[versions == specGeneral$lastOfficialVersion]
-    
     
     # Read README.md and change the version:
     README.md_path <- file.path(specGeneral$dir, "README.md")

@@ -1,7 +1,7 @@
 user;rootDir
 "arnejh";"~/Code/Github"
 "atlet";"D:/GIT"
-"a5362";"/Users/a5362/code/github/StoxProject"
+"a5362";"/Users/a5362/github/StoXProject"
 "esmaelmh";"D:/Projects/StoXProject"
 "sindrev";"E:/Arbeid/Koding/StockAssessmentTools/StoxProject"
 "ibrahim";"/home/user/repos/rstoxProject@github"
