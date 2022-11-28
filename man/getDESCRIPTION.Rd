@@ -2,14 +2,11 @@
 % Please edit documentation in R/build.R
 \name{getDESCRIPTION}
 \alias{getDESCRIPTION}
-\alias{getREADME}
 \alias{addImportsToDESCRIPTION}
 \alias{getPkgname}
 \title{Utility functions for getting and adding imports, DESCRIPTION, README and kgname to the package.}
 \usage{
 getDESCRIPTION(spec)
-
-getREADME(spec)
 
 addImportsToDESCRIPTION(spec, cpp = FALSE)
 

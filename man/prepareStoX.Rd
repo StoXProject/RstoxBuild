@@ -9,7 +9,8 @@ prepareStoX(
   version = "current",
   date = NULL,
   rootDir = NULL,
-  type = c("patch", "minor", "major")
+  type = c("patch", "minor", "major"),
+  prerelease = FALSE
 )
 }
 \arguments{
