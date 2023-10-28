@@ -1,6 +1,6 @@
 Package: RstoxBuild
 Version: 1.0
-Date: 2022-11-13
+Date: 2023-10-28
 Title: Package for Building All Rstox Packages
 Authors@R: c(
   person(given = "Arne Johannes", 
@@ -28,4 +28,4 @@ Suggests:
     rJava,
     Rstox,
     tiff
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3

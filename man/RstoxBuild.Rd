@@ -33,7 +33,4 @@ Useful links:
 \author{
 \strong{Maintainer}: Arne Johannes Holmin \email{arnejh@hi.no}
 
-
-\strong{Maintainer}: Arne Johannes Holmin \email{arnejh@hi.no}
-
 }
