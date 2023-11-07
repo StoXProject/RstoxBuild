@@ -134,7 +134,8 @@ buildRstoxPackage <- function(
 	type = c("patch", "minor", "major"), 
 	prerelease = FALSE, 
 	date = NULL, 
-	avoid_compileAttributes_error = FALSE
+	avoid_compileAttributes_error = FALSE, 
+	VignetteBuilder = NULL
 ) {
     
     # Get the specifications of the package:
@@ -164,7 +165,8 @@ buildRstoxPackage <- function(
 		type = type,
 		prerelease = prerelease, 
 		date = date, 
-		avoid_compileAttributes_error = avoid_compileAttributes_error
+		avoid_compileAttributes_error = avoid_compileAttributes_error, 
+		VignetteBuilder = VignetteBuilder
 	)
 	
 	# Set the path to the package for usethis:
@@ -366,6 +368,7 @@ buildRstoxPackage <- function(
 	        args = c("--no-manual", "--as-cran"), 
 	        error_on = "error", 
 	        check_dir = "check", 
+	        # Only used to check for circular dependencies, so we use the official StoX repo:
 	        repos = c("https://stoxproject.github.io/repo", "https://cloud.r-project.org")
         )
 		# args = "--no-examples"
@@ -437,7 +440,8 @@ packageSpecs <- function(
 	type = c("patch", "minor", "major"), 
 	prerelease = FALSE, 
 	date = NULL, 
-	avoid_compileAttributes_error = FALSE
+	avoid_compileAttributes_error = FALSE, 
+	VignetteBuilder = NULL
 ) {
 	
 	
@@ -491,7 +495,8 @@ packageSpecs <- function(
 	
 	# Get internal.dependencies version:
 	internal.dependencies_versions <- NULL
-	if(length(internal.dependencies) && length(additional_repositories)) {
+	#if(length(internal.dependencies) && length(additional_repositories)) {
+	if(length(internal.dependencies)) {
 	    #internal.dependencies_versions <- lapply(internal.dependencies, getHighestRelease, includePrerelease = prerelease)
 	    internal.dependencies_versions <- lapply(internal.dependencies, getHighestRelease)
 	    names(internal.dependencies_versions) <- internal.dependencies
@@ -506,7 +511,8 @@ packageSpecs <- function(
 	}
 	# Get internal.suggests version:
 	internal.suggests_versions <- NULL
-	if(length(internal.suggests) && length(additional_repositories)) {
+	#if(length(internal.suggests) && length(additional_repositories)) {
+	if(length(internal.suggests)) {
 	    #internal.suggests_versions <- lapply(internal.suggests, getHighestRelease, includePrerelease = prerelease)
 	    internal.suggests_versions <- lapply(internal.suggests, getHighestRelease)
 	    names(internal.suggests_versions) <- internal.suggests
@@ -548,7 +554,8 @@ packageSpecs <- function(
 		license = license, 
 		#NEWSfile = NEWSfile, 
 		#NEWS = NEWS
-		avoid_compileAttributes_error = avoid_compileAttributes_error
+		avoid_compileAttributes_error = avoid_compileAttributes_error, 
+		VignetteBuilder = VignetteBuilder
 	)
 	spec <- c(specGeneral, spec)
 	
@@ -699,7 +706,8 @@ getDESCRIPTION <- function(spec) {
 		"BugReports" = BugReports, 
 		"License" = spec$license, 
 		"LazyData" = "true", 
-		"Encoding" = "UTF-8"
+		"Encoding" = "UTF-8",  
+		"VignetteBuilder" = spec$VignetteBuilder
 	)
 	#if(spec$parallelTest) {
 	#    out[["Config/testthat/edition"]] = 3
@@ -1347,55 +1355,55 @@ getPackageItem <- function(name, spec, packageName=NULL, version=NULL) {
 	
 	return(object)
 }
-# Funciton to get the install path to GitHub:
-getGitHub_InstallPath <- function(packageName = "Rstox", accountName = "StoXProject" , version = NULL, ref = NULL, additional_repositories = NULL) {
-	# Get the relative GitHub path for the specific release:
-	path <- getGithubURL(
-		packageName = packageName, 
-		accountName = accountName
-	)
-
-	#path <- file.path(basename(githubRoot), packageName)
-	# Add the release version:
-	#if(length(version)) {
-	#	path <- paste0(path, "@v", version)
-	#}
-	#path <- deparse(path)
-	
-	ref <- version
-	
-	## Add the ref, which could be the deleop branch:
-	#if(length(ref)) {
-	#	path <- paste0(path, ", ref = ", deparse(ref))
-	#}
-	
-	# Construct and return the install string:
-	if(length(additional_repositories)) {
-	    string <- paste0(
-	        "# Install the latest binary:\n", 
-	        "install.packages(", packageName, ", repo = c(\"https://stoxproject.github.io/repo\", \"https://cloud.r-project.org\"))\n", 
-	        "# ... or install the latest version from GitHub:\n", 
-	        "# devtools::install_github(", "\"", path, "\"", ", ref = ", deparse(ref), ")"
-	    )
-	}
-	else {
-	    string <- paste0(
-	        "# Install the latest GitHub release:\n", 
-	        "devtools::install_github(", "\"", path, "\"", ", ref = ", deparse(ref), ")"
-	    )
-	}
-	
-	string <- c(
-        string, 
-        paste0(
-            "# ... or install the develop version from GitHub:\n", 
-            "# devtools::install_github(", "\"", path, "\"", ", ref = \"develop\")"
-        )
-    )
-	
-	
-	return(string)
-}
+## Funciton to get the install path to GitHub:
+#getGitHub_InstallPath <- function(packageName = "Rstox", accountName = "StoXProject" , version = NULL, ref = NULL, additional_repositories = NULL) {
+#	# Get the relative GitHub path for the specific release:
+#	path <- getGithubURL(
+#		packageName = packageName, 
+#		accountName = accountName
+#	)
+#
+#	#path <- file.path(basename(githubRoot), packageName)
+#	# Add the release version:
+#	#if(length(version)) {
+#	#	path <- paste0(path, "@v", version)
+#	#}
+#	#path <- deparse(path)
+#	
+#	ref <- version
+#	
+#	## Add the ref, which could be the deleop branch:
+#	#if(length(ref)) {
+#	#	path <- paste0(path, ", ref = ", deparse(ref))
+#	#}
+#	
+#	# Construct and return the install string:
+#	if(length(additional_repositories)) {
+#	    string <- paste0(
+#	        "# Install the latest binary:\n", 
+#	        "install.packages(", packageName, ", repo = c(\"https://stoxproject.github.io/repo\", \"https://cloud.r-project.org\"))\n", 
+#	        "# ... or install the latest version from GitHub:\n", 
+#	        "# devtools::install_github(", "\"", path, "\"", ", ref = ", deparse(ref), ")"
+#	    )
+#	}
+#	else {
+#	    string <- paste0(
+#	        "# Install the latest GitHub release:\n", 
+#	        "devtools::install_github(", "\"", path, "\"", ", ref = ", deparse(ref), ")"
+#	    )
+#	}
+#	
+#	string <- c(
+#        string, 
+#        paste0(
+#            "# ... or install the develop version from GitHub:\n", 
+#            "# devtools::install_github(", "\"", path, "\"", ", ref = \"develop\")"
+#        )
+#    )
+#	
+#	
+#	return(string)
+#}
 # Function to get the link to the (online) NEWS file on GitHub depending on the :
 getGitHub_NewsLink <- function(packageName = "Rstox", accountName = "StoXProject", version = "1.0") {
 	file.path(
@@ -1741,6 +1749,7 @@ getRstoxPackageVersionString <- function(packageName, version) {
 
 
 getReleases_old_using_GitHub_releasaes <- function(packageName, accountName = "StoXProject", all.releases = FALSE) {
+    
     API <- githubPaths("api")
     URL_releases <- paste(API, accountName, packageName, "releases", sep = "/")
     #URL_tags <- paste(API, accountName, packageName, "tags", sep = "/")
@@ -2133,8 +2142,7 @@ prepareStoX <- function(
     writeLines(package.json, package.json_path)
     
     
-    
-    OfficialRstoxFrameworkVersionsFilePath <- file.path(specGeneral$dir, "srv/OfficialRstoxFrameworkVersions.txt")
+   OfficialRstoxFrameworkVersionsFilePath <- file.path(specGeneral$dir, "srv/OfficialRstoxFrameworkVersions.txt")
     
     # If official, update version in Readme:
     #if(isOfficial(specGeneral$version)) {
@@ -2184,7 +2192,7 @@ prepareStoX <- function(
     
     # Set the last official as the new version if not a pre-release:
     if(prerelease) {
-        lastOfficialVersion <- getHighestRelease_old_using_GitHub_releasaes(packageName, accountName = accountName, includePrerelease = FALSE)
+        lastOfficialVersion <- getHighestRelease_old_using_GitHub_releasaes(packageName = "StoX", accountName = accountName, includePrerelease = FALSE)
     }
     else {
         lastOfficialVersion <- version
@@ -2198,6 +2206,7 @@ prepareStoX <- function(
     if(sum(atSee) != 1) {
         stop("The file ", README.md_path, " does not contain a line of the following form: See [release notes for StoX 3.1.0](https://github.com/StoXProject/StoX/blob/master/NEWS.md#Stox-v310-2021-06-18).")
     }
+    
     
     stringToreplace <- gsub(".*release notes for StoX (.+)\\]\\(.*", "\\1", README.md[atSee])
     README.md[atSee] <- sub(stringToreplace, specGeneral$lastOfficialVersion, README.md[atSee])

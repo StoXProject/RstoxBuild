@@ -36,7 +36,8 @@ buildRstoxPackage(
   type = c("patch", "minor", "major"),
   prerelease = FALSE,
   date = NULL,
-  avoid_compileAttributes_error = FALSE
+  avoid_compileAttributes_error = FALSE,
+  VignetteBuilder = NULL
 )
 
 packageSpecs(
@@ -65,7 +66,8 @@ packageSpecs(
   type = c("patch", "minor", "major"),
   prerelease = FALSE,
   date = NULL,
-  avoid_compileAttributes_error = FALSE
+  avoid_compileAttributes_error = FALSE,
+  VignetteBuilder = NULL
 )
 }
 \arguments{
