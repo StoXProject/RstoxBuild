@@ -706,9 +706,15 @@ getDESCRIPTION <- function(spec) {
 		"BugReports" = BugReports, 
 		"License" = spec$license, 
 		"LazyData" = "true", 
-		"Encoding" = "UTF-8",  
-		"VignetteBuilder" = spec$VignetteBuilder
+		"Encoding" = "UTF-8"
 	)
+	if(length(spec$VignetteBuilder)) {
+        out <- c(
+           out, 
+            list("VignetteBuilder" = spec$VignetteBuilder)
+        )
+    }
+	
 	#if(spec$parallelTest) {
 	#    out[["Config/testthat/edition"]] = 3
 	#    out[["Config/testthat/parallel"]] = "true"
@@ -2149,7 +2155,7 @@ prepareStoX <- function(
     
     # Copy and check OfficialRstoxFrameworkVersions.txt:
     download.file(
-        "https://raw.githubusercontent.com/StoXProject/RstoxFramework/master/inst/versions/OfficialRstoxFrameworkVersions.txt", 
+        "https://raw.githubusercontent.com/StoXProject/RstoxFramework/develop/inst/versions/OfficialRstoxFrameworkVersions.txt", 
         OfficialRstoxFrameworkVersionsFilePath
     )
     #}
