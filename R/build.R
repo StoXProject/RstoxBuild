@@ -629,7 +629,6 @@ packageSpecsGeneral <- function(
     dir <- packageName
     packageName <- basename(packageName)
     
-    
     # Get version:
     if(identical(version, "current")) {
         # Use the releases for StoX and the testingRepo for the Rstox packages:
@@ -2129,6 +2128,15 @@ prepareStoX <- function(
         prerelease = prerelease
     )
     
+    # Add the currently installed R version in the message in R connection:
+    RConnectionDlg.html_path <- file.path(specGeneral$dir, "frontend", "src", "app", "dlg", "RConnectionDlg.html")
+    RConnectionDlg.html <- readLines(RConnectionDlg.html_path)
+    Rver <- strsplit(base::version[['version.string']], ' ')[[1]][3]
+    RConnectionDlg.html <- sub("(?:(?:\\d)[.-]){2,}(?:\\d)", Rver, RConnectionDlg.html)
+    writeLines(RConnectionDlg.html, RConnectionDlg.html_path)
+    
+    
+    
     
     # Read package.json and change the version:
     package.json_path <- file.path(specGeneral$dir, "package.json")
@@ -2139,7 +2147,7 @@ prepareStoX <- function(
     if(sum(atVersion) != 1) {
         stop("The file ", package.json_path, " does not contain a line starting with ", atVersionKey, ".")
     }
-    package.json[atVersion] <- paste0(atVersionKey, "\"",  specGeneral$version, "\",")
+    package.json[atVersion] <- paste0("  ", atVersionKey, "\"",  specGeneral$version, "\",")
     
     # Write the changes:
     tmp <- tempdir()
@@ -2203,7 +2211,7 @@ prepareStoX <- function(
     else {
         lastOfficialVersion <- version
     }
-    newsDate <- dates[versions == specGeneral$lastOfficialVersion]
+    newsDate <- dates[versions == lastOfficialVersion]
     
     # Read README.md and change the version:
     README.md_path <- file.path(specGeneral$dir, "README.md")
@@ -2214,11 +2222,12 @@ prepareStoX <- function(
     }
     
     
+    
     stringToreplace <- gsub(".*release notes for StoX (.+)\\]\\(.*", "\\1", README.md[atSee])
-    README.md[atSee] <- sub(stringToreplace, specGeneral$lastOfficialVersion, README.md[atSee])
+    README.md[atSee] <- sub(stringToreplace, lastOfficialVersion, README.md[atSee])
     
     # Change version in link to NEWS:
-    versionDateString <- paste0(gsub("\\.", "", specGeneral$lastOfficialVersion),  "-",  newsDate)
+    versionDateString <- paste0(gsub("\\.", "", lastOfficialVersion),  "-",  newsDate)
     stringToreplace <- gsub(".*/NEWS.md\\#stox-v(.+)\\).*", "\\1", README.md[atSee])
     README.md[atSee] <- gsub(stringToreplace, versionDateString, README.md[atSee])
     
@@ -2230,7 +2239,8 @@ prepareStoX <- function(
     }
     
     stringToreplace <- gsub(".*releases/tag/v(.+)\\)\\. For.*", "\\1", README.md[atDownload])
-    README.md[atDownload] <- gsub(stringToreplace, specGeneral$lastOfficialVersion, README.md[atDownload])
+    README.md[atDownload] <- gsub(stringToreplace, lastOfficialVersion, README.md[atDownload])
+    
     
     # Write the changes:
     file.copy(README.md_path, tmp)
