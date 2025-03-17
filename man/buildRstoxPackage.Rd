@@ -37,7 +37,8 @@ buildRstoxPackage(
   prerelease = FALSE,
   date = NULL,
   avoid_compileAttributes_error = FALSE,
-  VignetteBuilder = NULL
+  VignetteBuilder = NULL,
+  debugNAMESPACE = FALSE
 )
 
 packageSpecs(

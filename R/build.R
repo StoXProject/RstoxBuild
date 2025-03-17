@@ -135,7 +135,8 @@ buildRstoxPackage <- function(
 	prerelease = FALSE, 
 	date = NULL, 
 	avoid_compileAttributes_error = FALSE, 
-	VignetteBuilder = NULL
+	VignetteBuilder = NULL, 
+	debugNAMESPACE = FALSE
 ) {
     
     # Get the specifications of the package:
@@ -319,8 +320,19 @@ buildRstoxPackage <- function(
 	unlink(NAMESPACEFile, force = TRUE)
 	
 	# If troubles with installation occurs, such as "pkgdir must refer to the directory containing an R package", copy the NAMESPACE file from GitHub before devtools::document:
-	#browser()
-	if(avoid_compileAttributes_error) {
+	if(debugNAMESPACE) {
+	    message("If troubles with installation occurs, such as \"pkgdir must refer to the directory containing an R package\", copy the NAMESPACE file from GitHub or from a local file before devtools::document")
+	    browser()
+	}
+	is_online <- function(site = "https://raw.githubusercontent.com/StoXProject/repo/master/README.md") {
+	    tryCatch({
+	        readLines(site, n = 1)
+	        TRUE
+	    },
+	    warning = function(w) invokeRestart("muffleWarning"),
+	    error = function(e) FALSE)
+	}
+	if(avoid_compileAttributes_error && is_online()) {
 	    # Copy the NAMESPACE file from GitHub:
 	    GitHubNAMESPACEFile <- file.path(
 	        "https://raw.githubusercontent.com", 
@@ -355,7 +367,8 @@ buildRstoxPackage <- function(
 	        # roxygen2::roxygenize prepares cpp (before we used usethis::use_rcpp(), which is not necessary expecct for the first time the package is created???):
 	        roxygen2::roxygenize(spec$dir)
 		}
-		# Also delete shared objects for safety:
+		# Also delete shared objects for safety (run this manually if problems like this occurs:
+	    # dyn.load(dll_copy_file) : unable to load shared object (mach-o file, but is an incompatible architecture  'x86_64', need "arm64e" or "arm64"
 		sharedObjects <- list.files(spec$src, pattern = "\\.o|so$", full.names = TRUE)
 		unlink(sharedObjects, recursive = TRUE, force = TRUE)
 	}
@@ -497,6 +510,9 @@ packageSpecs <- function(
 	internal.dependencies_versions <- NULL
 	#if(length(internal.dependencies) && length(additional_repositories)) {
 	if(length(internal.dependencies)) {
+	    
+	    browser()
+	    
 	    #internal.dependencies_versions <- lapply(internal.dependencies, getHighestRelease, includePrerelease = prerelease)
 	    internal.dependencies_versions <- lapply(internal.dependencies, getHighestRelease)
 	    names(internal.dependencies_versions) <- internal.dependencies
@@ -513,11 +529,17 @@ packageSpecs <- function(
 	internal.suggests_versions <- NULL
 	#if(length(internal.suggests) && length(additional_repositories)) {
 	if(length(internal.suggests)) {
-	    #internal.suggests_versions <- lapply(internal.suggests, getHighestRelease, includePrerelease = prerelease)
-	    internal.suggests_versions <- lapply(internal.suggests, getHighestRelease)
-	    names(internal.suggests_versions) <- internal.suggests
-	    ## Mark these as exact dependencies by setting them as list:
-	    #internal.dependencies_versions <- lapply(internal.dependencies_versions, as.list)
+	    
+	    if(!is.list(internal.suggests)) {
+	        #internal.suggests_versions <- lapply(internal.suggests, getHighestRelease, includePrerelease = prerelease)
+	        internal.suggests_versions <- lapply(internal.suggests, getHighestRelease)
+	        names(internal.suggests_versions) <- internal.suggests
+	        ## Mark these as exact dependencies by setting them as list:
+	        #internal.dependencies_versions <- lapply(internal.dependencies_versions, as.list)
+	    }
+	    else {
+	        internal.suggests_versions <- internal.suggests
+	    }
 	    
 	    # Add the remotes to the imports:
 	    suggests <- c(
@@ -603,7 +625,7 @@ packageSpecs <- function(
 packageSpecsGeneral <- function(
     packageName, 
     accountName = "StoXProject", 
-    repo = "https://stoxproject.github.io/testingRepo", 
+    repo = c("https://stoxproject.github.io/testingRepo", "https://stoxproject.github.io/repo"), 
     version = "current", 
     date = NULL, 
     rootDir = NULL, 
@@ -909,417 +931,6 @@ getPkgname <- function(spec) {
 	return(out)
 }
 
-
-##### Package specific functions: #####
-##### Rstox: #####
-title_Rstox <- function(version = "1.0") {
-	"Running StoX Functionality Independently in R"
-}
-
-description_Rstox <- function(version = "1.0") {
-	"R implementation of the functionality of the stock assesment utility StoX, which is an open source application fo acoustic-trawl and swept-area survey estimation."
-}
-
-details_Rstox <- function(version = "1.0") {
-	c(
-		"The core funciton of the package is \\code{\\link{getBaseline}} which runs a StoX project and retrieves the output and input parameters. The functions \\code{\\link{runBootstrap}} and \\code{\\link{imputeByAge}} are used by StoX for estimating the variance of the survey estimate. The functions \\code{\\link{getReports}} and \\code{\\link{getPlots}} are used to run report and plot funcitons relevant for the type of StoX project.",
-		"Rstox supports a variety of other uses, such as downloading biotic and acoustic data from the Norwegian Marine Data Center through \\code{\\link{getNMDinfo}} and \\code{\\link{getNMDdata}}. The data are placed in StoX projects, enabling the data to be read using \\code{\\link{getBaseline}}. The function \\code{\\link{readXMLfiles}} can be used to simply read an acoustic or biotic xml file into R memory (via a temporary StoX project). The simpler function \\code{\\link{downloadXML}} reads an arbitrary XML file into a list. It is also possible to write acoustic and biotic XML file in the MND echosounder (version 1.0) and biotic (version 1.4 and 3.0) format.",
-		"Rstox also contains functions for generating and reporting parallel or zigzag transect lines for use in a survey through \\code{\\link{surveyPlanner}}.",
-		"Soon to be implemented is running the Estimated Catch at Age (ECA) model develped by the Norwegian Computing Center and the Norwegian Institute of Marine Research."
-	)
-}
-
-authors_Rstox <- function(version = "1.0") {
-    list(
-        list(given="Arne Johannes", family="Holmin",	role=c("cre", "aut"), email="arnejh@hi.no"), 
-        list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
-        list(given="Gjert Endre",	   family="Dingsoer",	  role=c("aut")),
-        list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
-        list(given="Espen",		 family="Johnsen",   role=c("aut"))
-     )
-}
-
-.onLoad_Rstox <- function(version = "1.0") {
-	out <- c(
-		".onLoad <- function(libname, pkgname) {", 
-		"\tif(Sys.getenv(\"JAVA_HOME\")!=\"\") Sys.setenv(JAVA_HOME=\"\")", 
-		"\t# Initiate the Rstox environment:", 
-		"\tDefinitions <- initiateRstoxEnv()", 
-		"\t# Set the Java memory:", 
-		"\tsetJavaMemory(Definitions$JavaMem)", 
-		"} "
-	)
-	out <- paste(out, collapse="\n")
-	#function(libname, pkgname) {
-	#	if(Sys.getenv("JAVA_HOME")!="") Sys.setenv(JAVA_HOME="")
-	#	# Initiate the Rstox environment:
-	#	Definitions <- initiateRstoxEnv()
-	#	# Set the Java memory:
-	#	setJavaMemory(Definitions$JavaMem)
-	#} 
-	
-	return(out)	
-}
-
-.onAttach_Rstox <- function(version = "1.0") {
-	
-	fun <- ".onAttach <- function(libname, pkgname) {"
-	hash <- "**********"
-	devWarn <- "WARNING: This version of Rstox is an unofficial/developer version and bugs should be expected."
-	JavaMem <- "If problems with Java Memory such as java.lang.OutOfMemoryError occurs, see ?setJavaMemory."
-	info <- paste(
-		c(
-			"", 
-			hash, 
-			if(!isMaster(version)) devWarn else NULL, 
-			JavaMem, 
-			hash, 
-			""
-		)
-		, collapse = "\n"
-	)
-	
-	
-	ver <- paste0("Rstox_", version)
-	
-	out <- paste(
-		fun, 
-		paste0("\tpackageStartupMessage(", deparse(paste(ver, info)), ", appendLF=FALSE)"), 
-		"}", 
-		sep = "\n"
-	)
-	
-	
-	return(out)
-}
-
-misc_Rstox <- function(version = "1.0") {
-	c(
-		"# To do this, uncheck the box \"32-bit Files\" when selecting components to install.", 
-		"# If you are re-installing an R that has both 32 and 64 bit, you will need to uninstall R first.", 
-		"", 
-		"# On Windows systems with adminstrator requirements, it is recommended to install R in C:/users/<user>/documents/R.", 
-		"# Also if you are using Rstudio, please make sure that you are using the correct R version (in case you have", 
-		"# multiple versions installed). The R version can be selected in Tools > Global Options.", 
-		"", 
-		"# Note that 64 bit Java is required to run Rstox", 
-		"", 
-		"# On Windows, install Java from this webpage: https://www.java.com/en/download/windows-64bit.jsp,", 
-		"# or follow the instructions found on ftp://ftp.imr.no/StoX/Tutorials/", 
-		"", 
-		"# On Mac, getting Java and Rstox to communicate can be challenging.", 
-		"# If you run into problems such as \"Unsupported major.minor version ...\", try the following:", 
-		"# Update java, on", 
-		"# \thttp://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html", 
-		"# If this does not work install first the JDK and then the JRE:", 
-		"# \thttp://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html", 
-		"# \thttp://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html", 
-		"# Rstox sohuld also work with Java 11, presently available only as Development Kit:", 
-		"# \thttps://www.oracle.com/technetwork/java/javase/downloads/jdk11-downloads-5066655.html", 
-		"# You may want to check that the downloaded version is first in the list by running the following in the Terminal:", 
-		"# \t/usr/libexec/java_home -V", 
-		"# \tjava -version", 
-		"# Then run this in the Terminal.app (you will be asked for password, but the password will not show as you type.", 
-		"# It is possible to type the password in a text editor first and then paste it into the Terminal.):", 
-		"# \tsudo ln -s $(/usr/libexec/java_home)/jre/lib/server/libjvm.dylib /usr/local/lib", 
-		"# \tsudo R CMD javareconf", 
-		"# Open R (close and then open if already open) and install rJava:", 
-		"# \tutils::install.packages('rJava', type='source')", 
-		"# \tutils::install.packages('rJava', type=\"binary\")", 
-		"# If this fails, try installing from source instead using utils::install.packages('rJava', type='source')", 
-		"# Then the installed Rstox should work."
-	)
-}
-##########
-
-##### RstoxFramework: #####
-title_RstoxFramework <- function(version = "1.0") {
-	"The Engine of StoX"
-}
-
-description_RstoxFramework <- function(version = "1.0") {
-	"The framwork of StoX >= 3.0."
-}
-
-details_RstoxFramework <- function(version = "1.0") {
-	c(
-		"The RstoxFramework package is the engine of the stock assesment utility StoX, which is an open source application fo acoustic-trawl and swept-area survey estimation.", 
-		"The package creates an evironment containing the StoX project(s) in separate environments. Each StoX project consists of a list of data tables holding e.g. biotic and acoustic data, filtered versions of the data, strata system, definitios of primary sampling units, accompanied by a list of specifications of the StoX processes comprising the StoX project. A StoX process is an R function taking as input the project name, the input data and parameters used by the function.",
-		"The package replaces the old Java library in StoX versions prior to StoX 4.0."
-	)
-}
-
-authors_RstoxFramework <- function(version = "1.0") {
-	list(
-		list(given="Arne Johannes", family="Holmin",	role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Ibrahim",	   family="Umar",	  role=c("aut")),
-		list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
-		list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
-		list(given="Esmael Musema", family="Hassen",	role=c("aut")),
-		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
-		list(given="Espen",		 family="Johnsen",   role=c("aut")),
-		list(given="Atle",		  family="Totland",   role=c("aut")),
-		list(given="Anthony",  family="Hennessey", role=c("aut")),
-		list(given="Mikko Juhani",  family="Vihtakari", role=c("aut")),
-		list(given="Norwegian Institute of Marine Research",   role=c("cph", "fnd"))
-	)
-}
-
-.onLoad_RstoxFramework <- function(version = "1.0") {
-	out <- c(
-		".onLoad <- function(libname, pkgname) {", 
-		"\t# Initiate the RstoxFramework environment:", 
-		"\tinitiateRstoxFramework()", 
-		"} "
-	)
-	paste(out, collapse="\n")
-}
-
-#.onAttach_RstoxFramework <- function(version = "1.0") {
-#    out <- c(
-#        ".onAttach <- function(libname, pkgname) {", 
-#        "\trequireNamespace(\"data.table\")", 
-#        "} "
-#    )
-#    paste(out, collapse="\n")
-#}
-
-
-##########
-
-##### RstoxData: #####
-title_RstoxData <- function(version = "1.0") {
-    # "Utilities to Read Fisheries Biotic, Acoustic and Landing Data Formats"
-	#"Utilities to Read and Manipulate Fisheries' Trawl Survey, Acoustic Survey and Commercial Landings Data Formats"
-    "Tools to Read and Manipulate Fisheries Data"
-}
-
-description_RstoxData <- function(version = "1.0") {
-	#"Tools to fetch and manipulate various data formats for fisheries (mainly geared towards biotic and acoustic data)."
-    "Set of tools to read and manipulate various data formats for fisheries. Mainly catered towards scientific trawl survey sampling ('biotic') data, acoustic trawl data, and commercial fishing catch ('landings') data. Among the supported data formats are the data products from the Norwegian Institute Marine Research (IMR) and the International Council for the Exploration of the Sea (ICES)."
-}
-
-details_RstoxData <- function(version = "1.0") {
-	"The RstoxData package contains functions for reading, filtering and writing biotic, acoustic and landing data as XML files. Filtering can be done by R syntax such as longitude > 10, or by pre defined functions such as inside(). On computers that return errors when trying to run the Rtools through RStudio (most institutional Windows machines), install the binary directly from https://github.com/StoXProject/RstoxData/releases. Download the newest RstoxData zip file, click the \"Packages\" tab -> \"Install\" -> \"Install from:\" \"Package Archive File\" -> \"Install\". If the installer does not complain, the package is installed correctly."
-}
-
-authors_RstoxData <- function(version = "1.0") {
-	list(
-	    list(given="Edvin",		 family="Fuglebakk", role=c("cre", "aut"), email="edvin.fuglebakk@hi.no"),
-	    list(given="Arne Johannes", family="Holmin",	role=c("aut")),
-	    list(given="Ibrahim",	   family="Umar",	  role=c("aut")), 
-		#list(given="Mikko Juhani",  family="Vihtakari", role=c("aut")),
-		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
-		list(given="Anthony",  family="Hennessey", role=c("aut")),
-		list(given="Espen",		 family="Johnsen",   role=c("aut")),
-		list(given="Norwegian Institute of Marine Research",   role=c("cph", "fnd"))
-	)
-}
-
-.onLoad_RstoxData <- function(version = "1.0") {
-    out <- c(
-        ".onLoad <- function(libname, pkgname) {", 
-        "\t# Initiate the RstoxData environment:", 
-        "\tinitiateRstoxData()", 
-        "} "
-    )
-    paste(out, collapse="\n")
-}
-
-.onUnload_RstoxData <- function(version = "1.0") {
-    out <- c(
-        "# Try to unload dynamic library", 
-        ".onUnload <- function (libpath) {", 
-        "\tlibrary.dynam.unload(\"RstoxData\", libpath)", 
-        "} "
-    )
-    paste(out, collapse="\n")
-}
-##########
-
-##### RstoxFDA: #####
-title_RstoxFDA <- function(version = "1.0") {
-	"Fisheries Dependent Analysis with RstoX"
-}
-
-description_RstoxFDA <- function(version = "1.0") {
-	"Fisheries dependent analysis, including running the Estimated Catch at Age model through the Reca package developed by the Norwegian Computing Center."
-}
-
-details_RstoxFDA <- function(version = "1.0") {
-	"The estimated catch at age (ECA) model uses the correlation structure in fisheries dependent data to distribute age readings from cathes (samples) onto the total reported landings. The ECA model is described in Hirst, D., Aanes, S., Storvik, G., Huseby, R. B., & Tvete, I. F. (2004). Estimating catch at age from market sampling data by using a Bayesian hierarchical model. Journal of the Royal Statistical Society: Series C (Applied Statistics), 53(1), 1-14."
-}
-
-authors_RstoxFDA <- function(version = "1.0") {
-	list(
-	    list(given="Edvin",		 family="Fuglebakk", role=c("cre", "aut"), email="arnejh@hi.no"), 
-	    list(given="Arne Johannes", family="Holmin", role=c("aut"))
-	)
-}
-##########
-
-##### RstoxSurveyPlanner: #####
-title_RstoxSurveyPlanner <- function(version = "1.0") {
-	"Survey Design of Acoustic-trawl and Swept-area Surveys"
-}
-
-description_RstoxSurveyPlanner <- function(version = "1.0") {
-	"Tools to generate parallel or zig zag transects for use in acoustic-trawl and swept area surveys."
-}
-
-details_RstoxSurveyPlanner <- function(version = "1.0") {
-	"The RstoxSurveyPlanner package is a tool for generating parallel and zig zag transects for acoustic-trawl and swept-area surveys. Several methods for zig zag survey design are implemented, including the equal space design by Strindberg, S., & Buckland, S. T. (2004). Zigzag survey designs in line transect sampling. Journal of Agricultural, Biological, and Environmental Statistics, 9(4), 443. To garantee equal coverage the package includes the zig zag survey design presented by Harbitz, A. (2019). A zigzag survey design for continuous transect sampling with guaranteed equal coverage probability. Fisheries Research, 213, 151-159."
-}
-
-authors_RstoxSurveyPlanner <- function(version = "1.0") {
-	list(
-		list(given="Arne Johannes", family="Holmin",   role=c("cre", "aut"), email="arnejh@hi.no"), 
-		list(given="Sindre",		family="Vatnehol", role=c("cre", "aut"), email="sindre.vatnehol@hi.no"), 
-		list(given="Alf",		   family="Harbitz",  role=c("aut")), 
-		list(given="Espen",		 family="Johnsen",  role=c("aut"))
-	)
-}
-##########
-
-
-##### RstoxBuild: #####
-title_RstoxBuild <- function(version = "1.0") {
-	"Package for Building All Rstox Packages"
-}
-
-description_RstoxBuild <- function(version = "1.0") {
-	"Building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects."
-}
-
-details_RstoxBuild <- function(version = "1.0") {
-	"The package defines titles, descriptions, dependencies, authors, install instructions and other info for all the packages. All changes to authors, descriptions, suggests and other outputs of the function \\code{packageSpecs} should be changed in this package, and not in the individual packages. The package also contains functionality for semi-automated testing of Rstox on a set of test projects."
-}
-
-authors_RstoxBuild <- function(version = "1.0") {
-	list(
-		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
-	)
-}
-
-#.onLoad_RstoxBuild <- function(version = "1.0") {
-#    out <- c(
-#        ".onLoad <- function(libname, pkgname) {", 
-#        "\t# Initiate the RstoxBuild environment:", 
-#        "\tlibrary(data.table)", 
-#        "} "
-#    )
-#    paste(out, collapse="\n")
-#}
-##########
-
-##### RstoxBase: #####
-title_RstoxBase <- function(version = "1.0") {
-	"Base StoX Functions"
-}
-
-description_RstoxBase <- function(version = "1.0") {
-	"Base StoX functions used for survey estimation."
-}
-
-details_RstoxBase <- function(version = "1.0") {
-	"The StoX functions defined in RstoxBase are those for defining resolution (e.g., PSUs and Layers), assignment, NASC data and StationLengthDistribution data, density, abundance and superindividual abundance"
-}
-
-authors_RstoxBase <- function(version = "1.0") {
-	list(
-		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no"),
-		list(given="Ibrahim",	 family="Umar",	     role=c("aut")), 
-		list(given="Sindre",		family="Vatnehol",  role=c("aut")),
-		list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
-		list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
-		list(given="Esmael Musema", family="Hassen",	role=c("aut")),
-		list(given="Anthony",  family="Hennessey", role=c("aut")),
-		list(given="Espen",		 family="Johnsen",   role=c("aut")),
-		list(given="Atle",		  family="Totland",   role=c("aut")),
-		list(given="Norwegian Institute of Marine Research",   role=c("cph", "fnd"))
-	)
-}
-
-.onLoad_RstoxBase <- function(version = "1.0") {
-	out <- c(
-		".onLoad <- function(libname, pkgname) {", 
-		"\t# Initiate the RstoxBase environment:", 
-		"\tinitiateRstoxBase()", 
-		"} "
-	)
-	paste(out, collapse="\n")
-}
-##########
-
-
-
-##### RstoxNMD: #####
-title_RstoxNMD <- function(version = "1.0") {
-    "Download data from the Norwegian Marien Data center (NMD)"
-}
-
-description_RstoxNMD <- function(version = "1.0.0") {
-    "Download reference data and cruise data from the Norwegian Marien Data center (NMD)."
-}
-
-details_RstoxNMD <- function(version = "1.0.0") {
-    "This package contains functionality extracted from the old Rstox package. Use getNMDinfo() to get reference data and getNMDdata() to download cruise data."
-}
-
-authors_RstoxNMD <- function(version = "1.0.0") {
-    list(
-        list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no"),
-        list(given="Ibrahim",	 family="Umar",	     role=c("aut")), 
-        list(given="Sindre",		family="Vatnehol",  role=c("aut")),
-        list(given="Edvin",		 family="Fuglebakk", role=c("aut")),
-        list(given="Aasmund",	   family="Skaalevik", role=c("aut")),
-        list(given="Espen",		 family="Johnsen",   role=c("aut")),
-        list(given="Norwegian Institute of Marine Research",   role=c("cph", "fnd"))
-    )
-}
-
-.onLoad_RstoxNMD <- function(version = "1.0.0") {
-    out <- c(
-        ".onLoad <- function(libname, pkgname) {", 
-        "\t# Initiate the RstoxNMD environment:", 
-        "\tinitiateRstoxNMD()", 
-        "} "
-    )
-    paste(out, collapse="\n")
-}
-##########
-
-
-
-##### Rstox: #####
-title_RstoxAPI <- function(version = "1.0") {
-	"The API to StoX"
-}
-
-description_RstoxAPI <- function(version = "1.0") {
-	"This package is the interface between RstoxFramework and the StoX GUI. It ensures that the specified packages are installed for a StoX version."
-}
-
-details_RstoxAPI <- function(version = "1.0") {
-	"The package contains the function runModel() for running a model of a StoX project, runFunction() for accessing a function in RstoxFramework (or another package), and specifies the particular versions of the RstoxFramework and the packages specified as official packages by RstoxFramework."
-}
-
-authors_RstoxAPI <- function(version = "1.0") {
-	list(
-		list(given="Arne Johannes", family="Holmin", role=c("cre", "aut"), email="arnejh@hi.no")
-	)
-}
-
-.onLoad_RstoxAPI <- function(version = "1.0") {
-	out <- c(
-		".onLoad <- function(libname, pkgname) {", 
-		"\t# Initiate the RstoxAPI environment:", 
-		"\tinitiateRstoxAPI()", 
-		"} "
-	)
-	paste(out, collapse="\n")
-}
-##########
 
 
 ##### Utility functions: #####
@@ -1913,7 +1524,20 @@ incrementHighestRelease_old_using_GitHub_releasaes <- function(packageName, type
 }
 
 
-getHighestRelease <- function(packageName, repo = "https://stoxproject.github.io/testingRepo") {
+getHighestRelease <- function(packageName, repo = c("https://stoxproject.github.io/testingRepo", "https://stoxproject.github.io/repo")) {
+    
+    # Get the versions across repos:
+    versions <- sapply(repo, getHighestReleaseOneRepo, packageName)
+    
+    # Get the highest:
+    versions_semver <- semver::parse_version(versions)
+    highestRelease <- as.character(max(versions_semver))
+    
+    
+    return(highestRelease)
+}
+
+getHighestReleaseOneRepo <- function(repo, packageName) {
     
     # Get release version numbers:
     a <- available.packages(repos = repo)
@@ -1926,7 +1550,8 @@ getHighestRelease <- function(packageName, repo = "https://stoxproject.github.io
     return(version)
 }
 
-incrementHighestRelease <- function(packageName, type = c("patch", "minor", "major"), prerelease = FALSE, repo = "https://stoxproject.github.io/testingRepo") {
+incrementHighestRelease <- function(packageName, type = c("patch", "minor", "major"), prerelease = FALSE, repo = c("https://stoxproject.github.io/testingRepo", "https://stoxproject.github.io/repo")) {
+    
     
     # Get the increment type:
     type <- match.arg(type)
@@ -1990,9 +1615,44 @@ incrementVersion <- function(version, type = c("patch", "minor", "major"), prere
     
     # Get the increment type:
     type <- match.arg(type)
+    # First identify the type of the existing version:
+    currentType <- getSemverType(version)
     
     # Use the semver package to define the svptr object and the rendered list of version numbers:
     version <- semver::parse_version(version)[[1]]
+    versionList <- semver::render_version(version)
+    
+    # 1. If moving from a pre-release to release, increment with 0, and simply skip the pre-release number
+    # 2. If moving from a pre-release to a pre-release, increment with 0, and increment the pre-release number
+    # 3. If moving from a release to pre-release, increment with 1, and increment the pre-release number (from "" to "9001")
+    # 4: Otherwise increment with 1
+    
+    # Condensed, this is the following rules:
+    # a: If the current is a pre-release, increment with 0
+    
+    increment <- ifelse(versionList$prerelease != "", 0L, 1L)
+    
+    # Increment to next version:
+    nextVersion <- semver::increment_version(version, field = type, value = increment)
+    
+    # Increment the pre-release number if the type is equal:
+    if(prerelease) {
+        if(currentType == type) {
+            prereleaseString <- semver::render_version(version)$prerelease
+        }
+        else {
+            prereleaseString <- semver::render_version(nextVersion)$prerelease
+        }
+        #nextVersionList <- semver::render_version(nextVersion)
+        #nextVersion <- semver::reset_version(nextVersionList, field = "prerelease", value = incrementPrerelease(prereleaseString))
+        nextVersion <- semver::reset_version(nextVersion, field = "prerelease", value = incrementPrerelease(prereleaseString))
+    }
+    
+    
+    
+    
+    
+    
     #versionList <- semver::render_version(version)
     
     # Skipping this and rather in increment by one always, which also solves the problem that R does no respect semanic versioning:
@@ -2004,33 +1664,39 @@ incrementVersion <- function(version, type = c("patch", "minor", "major"), prere
     
     
     
-    # Increment the Rstox preselease number:
-    increment <- 1L
-    if(prerelease) {
-        # First idenify the type of the existing version:
-        currentType <- getSemverType(version)
-        
-        if(currentType == type) {
-            increment <- 0L
-        }
-        
-        # Increment to next version:
-        nextVersion <- semver::increment_version(version, field = type, value = increment)
-        
-        # Increment he pre-release number if the type is equal:
-        if(currentType == type) {
-            prereleaseString <- semver::render_version(version)$prerelease
-        }
-        else {
-            prereleaseString <- semver::render_version(nextVersion)$prerelease
-        }
-        
-        versionList <- semver::render_version(nextVersion)
-        nextVersion <- semver::reset_version(nextVersion, field = "prerelease", value = incrementPrerelease(prereleaseString))
-    }
-    else {
-        nextVersion <- semver::increment_version(version, field = type, value = increment)
-    }
+    ### # Increment the Rstox preselease number:
+    ### increment <- 1L
+    ### if(prerelease) {
+    ###     # First identify the type of the existing version:
+    ###     currentType <- getSemverType(version)
+    ###     
+    ###     #if(currentType == type) {
+    ###     #    increment <- 0L
+    ###     #}
+    ###     
+    ###     # Do not increment the release if we are in a pre-release, as the function incrementPrerelease() takes care of that:
+    ###     versionList <- semver::render_version(version)
+    ###     if(versionList$prerelease != "") {
+    ###         increment <- 0L
+    ###     }
+    ###     
+    ###     # Increment to next version:
+    ###     nextVersion <- semver::increment_version(version, field = type, value = increment)
+    ###     
+    ###     # Increment the pre-release number if the type is equal:
+    ###     if(currentType == type) {
+    ###         prereleaseString <- semver::render_version(version)$prerelease
+    ###     }
+    ###     else {
+    ###         prereleaseString <- semver::render_version(nextVersion)$prerelease
+    ###     }
+    ###     
+    ###     nextVersionList <- semver::render_version(nextVersion)
+    ###     nextVersion <- semver::reset_version(nextVersionList, field = "prerelease", value = incrementPrerelease(prereleaseString))
+    ### }
+    ### else {
+    ###     nextVersion <- semver::increment_version(version, field = type, value = increment)
+    ### }
     
     message("Highest release: ", as.character(version))
     message("Next release: ", as.character(nextVersion))
@@ -2130,38 +1796,19 @@ prepareStoX <- function(
     
     # Add the currently installed R version in the message in R connection:
     RConnectionDlg.html_path <- file.path(specGeneral$dir, "frontend", "src", "app", "dlg", "RConnectionDlg.html")
-    RConnectionDlg.html <- readLines(RConnectionDlg.html_path)
-    Rver <- strsplit(base::version[['version.string']], ' ')[[1]][3]
-    RConnectionDlg.html <- sub("(?:(?:\\d)[.-]){2,}(?:\\d)", Rver, RConnectionDlg.html)
-    writeLines(RConnectionDlg.html, RConnectionDlg.html_path)
-    
-    
+    addInstalledRToRConnectionDlg(RConnectionDlg.html_path)
     
     
     # Read package.json and change the version:
     package.json_path <- file.path(specGeneral$dir, "package.json")
-    package.json <- readLines(package.json_path)
-    # Find the line starting with '"version": ':
-    atVersionKey <- "\"version\": "
-    atVersion <- startsWith(trimws(package.json),  atVersionKey)
-    if(sum(atVersion) != 1) {
-        stop("The file ", package.json_path, " does not contain a line starting with ", atVersionKey, ".")
-    }
-    package.json[atVersion] <- paste0("  ", atVersionKey, "\"",  specGeneral$version, "\",")
-    
-    # Write the changes:
-    tmp <- tempdir()
-    file.copy(package.json_path, tmp)
-    message("File ",  package.json_path, "backed up to ", tmp)
-    writeLines(package.json, package.json_path)
+    updateVersionInPackage.json(package.json_path, specGeneral$version) 
+    # Read frontend/package.json and change the version:
+    package.json_path <- file.path(specGeneral$dir, "frontend", "package.json")
+    updateVersionInPackage.json(package.json_path, specGeneral$version) 
     
     
-   OfficialRstoxFrameworkVersionsFilePath <- file.path(specGeneral$dir, "srv/OfficialRstoxFrameworkVersions.txt")
-    
-    # If official, update version in Readme:
-    #if(isOfficial(specGeneral$version)) {
-    
-    # Copy and check OfficialRstoxFrameworkVersions.txt:
+    # Copy and check OfficialRstoxFrameworkVersions.txt from the develop branch:
+    OfficialRstoxFrameworkVersionsFilePath <- file.path(specGeneral$dir, "srv/OfficialRstoxFrameworkVersions.txt")
     download.file(
         "https://raw.githubusercontent.com/StoXProject/RstoxFramework/develop/inst/versions/OfficialRstoxFrameworkVersions.txt", 
         OfficialRstoxFrameworkVersionsFilePath
@@ -2183,14 +1830,14 @@ prepareStoX <- function(
     Official_StoX_versionsMDFilePath <- file.path(specGeneral$dir, "Official_StoX_versions.md")
     # Check if the latest version is included:
     if(! grepl(latestOfficialVesion, readChar(Official_StoX_versionsMDFilePath, 1e6)) ) {
-        stop("The file ", Official_StoX_versionsMDFilePath, " does not contain the latest official version.")
+        stop("The file ", Official_StoX_versionsMDFilePath, " does not contain the latest official version. Please add that.")
     }
     
     # Check the StoX version in the Official_StoX_versions.txt:
     Official_StoX_versionsTXTFilePath <- file.path(specGeneral$dir, "srv/Official_StoX_versions.txt")
     # Check if the latest version is included:
     if(! grepl(latestOfficialVesion, readChar(Official_StoX_versionsTXTFilePath, 1e6)) ) {
-        stop("The file ", Official_StoX_versionsTXTFilePath, " does not contain the latest official version.")
+        stop("The file ", Official_StoX_versionsTXTFilePath, " does not contain the latest official version. Please add that.")
     }
     
     
@@ -2209,7 +1856,7 @@ prepareStoX <- function(
         lastOfficialVersion <- getHighestRelease_old_using_GitHub_releasaes(packageName = "StoX", accountName = accountName, includePrerelease = FALSE)
     }
     else {
-        lastOfficialVersion <- version
+        lastOfficialVersion <- specGeneral$version
     }
     newsDate <- dates[versions == lastOfficialVersion]
     
@@ -2243,15 +1890,36 @@ prepareStoX <- function(
     
     
     # Write the changes:
+    tmp <- tempdir()
     file.copy(README.md_path, tmp)
     message("File ",  README.md_path, "backed up to ", tmp)
     writeLines(README.md, README.md_path)
-    
-    
-    
-    
 }
 
+
+addInstalledRToRConnectionDlg <- function(RConnectionDlg.html_path) {
+    RConnectionDlg.html <- readLines(RConnectionDlg.html_path)
+    Rver <- strsplit(base::version[['version.string']], ' ')[[1]][3]
+    RConnectionDlg.html <- sub("(?:(?:\\d)[.-]){2,}(?:\\d)", Rver, RConnectionDlg.html)
+    writeLines(RConnectionDlg.html, RConnectionDlg.html_path)
+}
+
+updateVersionInPackage.json <- function(package.json_path, version) {
+    package.json <- readLines(package.json_path)
+    # Find the line starting with '"version": ':
+    atVersionKey <- "\"version\": "
+    atVersion <- startsWith(trimws(package.json),  atVersionKey)
+    if(sum(atVersion) != 1) {
+        stop("The file ", package.json_path, " does not contain a line starting with ", atVersionKey, ".")
+    }
+    package.json[atVersion] <- paste0("  ", atVersionKey, "\"",  version, "\",")
+    
+    # Write the changes:
+    tmp <- tempdir()
+    file.copy(package.json_path, tmp)
+    message("File ",  package.json_path, "backed up to ", tmp)
+    writeLines(package.json, package.json_path)
+}
 
 isOfficial <- function(version) {
     #endsWith(version, ".0.0") | endsWith(version, ".0")

@@ -3,7 +3,6 @@
 \docType{package}
 \name{RstoxBuild}
 \alias{RstoxBuild}
-\alias{RstoxBuild-package}
 \title{Package for Building All Rstox Packages}
 \description{
 Building the Rstox packages (Rstox, RstoxFramework, RstoxData, RstoxFDA, RstoxSurveyPlanner, RstoxTempdoc, and even RstoxBuild), and semi-automated testing of Rstox though test projects.
